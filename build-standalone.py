@@ -8,13 +8,18 @@ out = os.path.join(d, "arena-card-tactics.html")
 
 html = io.open(src, encoding="utf-8").read()
 
-# 画像を名前→data URI の対応表にする
+# 画像を名前→data URI の対応表にする（カードのPNGと背景のJPEG）
 table = {}
 for f in sorted(os.listdir(art)):
-    if not f.lower().endswith(".png"):
+    low = f.lower()
+    if low.endswith(".png"):
+        mime = "image/png"
+    elif low.endswith(".jpg"):
+        mime = "image/jpeg"
+    else:
         continue
     with open(os.path.join(art, f), "rb") as fp:
-        table[f] = "data:image/png;base64," + base64.b64encode(fp.read()).decode("ascii")
+        table[f] = "data:%s;base64," % mime + base64.b64encode(fp.read()).decode("ascii")
 
 inject = "<script>window.__ART__=" + json.dumps(table) + ";</script>\n"
 

@@ -16,46 +16,44 @@
     color:#fff;
     background:#140f0a;
   }
-  /* ===== アリーナ背景（壁＋奥行きのある石床＋松明） ===== */
-  #bg { position:fixed; inset:0; z-index:-2; overflow:hidden; }
-  #bgWall { position:absolute; top:0; left:0; right:0; height:40%;
+  /* ===== アリーナ背景（描き込んだ背景画＋光の演出） ===== */
+  #bg { position:fixed; inset:0; z-index:-2; overflow:hidden; background:#0b0906; }
+  /* 背景画は2枚を重ね、切り替え時にクロスフェードさせる */
+  .bgLayer { position:absolute; inset:0; background-size:cover; background-position:center 42%;
+    opacity:0; transition:opacity .9s ease; transform:scale(1.04);
+    animation:bgDrift 46s ease-in-out infinite alternate; }
+  .bgLayer.on { opacity:1; }
+  @keyframes bgDrift {
+    from { transform:scale(1.04) translate(0,0); }
+    to   { transform:scale(1.09) translate(0,-1.4%); }
+  }
+  /* 空気中の塵（奥行きを出す） */
+  #bgDust { position:fixed; inset:0; z-index:-1; pointer-events:none; opacity:.5;
     background:
-      repeating-linear-gradient(90deg, rgba(0,0,0,.42) 0 7px, transparent 7px 104px),
-      repeating-linear-gradient(0deg, rgba(0,0,0,.26) 0 4px, transparent 4px 58px),
-      linear-gradient(#0e0b07 0%, #2a2116 45%, #46381f 70%, #4c3d27 100%);
-    background-color:#2a2116;
-    box-shadow: inset 0 -40px 55px rgba(0,0,0,.75); }
-  #bgArches { position:absolute; top:6%; left:0; right:0; height:26%;
-    background:repeating-linear-gradient(90deg,
-      transparent 0 74px, rgba(0,0,0,.55) 74px 96px, transparent 96px 210px);
-    -webkit-mask-image:radial-gradient(ellipse 60% 100% at 50% 100%, #000 60%, transparent 100%);
-    mask-image:radial-gradient(ellipse 60% 100% at 50% 100%, #000 60%, transparent 100%); }
-  #bgFloor { position:absolute; top:40%; left:-45%; right:-45%; bottom:-25%;
-    transform:perspective(540px) rotateX(53deg); transform-origin:top center;
-    background:linear-gradient(#6d5a37 0%, #a68d5c 22%, #bdA57a 45%, #7d6840 100%);
-    background-color:#a68d5c; }
-  #bgGrid { position:absolute; inset:0;
-    background:
-      repeating-linear-gradient(90deg, rgba(0,0,0,.24) 0 3px, transparent 3px 128px),
-      repeating-linear-gradient(0deg, rgba(0,0,0,.20) 0 3px, transparent 3px 128px); }
-  /* 壁と床の境目の影 */
-  #bgHorizon { position:absolute; top:40%; left:0; right:0; height:90px; transform:translateY(-6px);
-    background:linear-gradient(rgba(0,0,0,.72), rgba(0,0,0,.28) 45%, transparent 100%); }
+      radial-gradient(circle at 12% 30%, rgba(255,230,180,.55) 0 1.1px, transparent 1.6px),
+      radial-gradient(circle at 34% 68%, rgba(255,230,180,.42) 0 1.4px, transparent 2px),
+      radial-gradient(circle at 58% 22%, rgba(255,230,180,.5) 0 1px, transparent 1.5px),
+      radial-gradient(circle at 77% 55%, rgba(255,230,180,.38) 0 1.3px, transparent 1.9px),
+      radial-gradient(circle at 91% 34%, rgba(255,230,180,.46) 0 1.1px, transparent 1.6px);
+    background-size:340px 300px, 420px 380px, 300px 340px, 460px 400px, 380px 320px;
+    animation:dust 34s linear infinite; }
+  @keyframes dust {
+    from { background-position:0 0, 0 0, 0 0, 0 0, 0 0; }
+    to   { background-position:0 -300px, 0 -380px, 0 -340px, 0 -400px, 0 -320px; }
+  }
+  /* 明暗の調整。UIを読みやすくしつつ雰囲気を残す */
   #bgVig { position:fixed; inset:0; z-index:-1; pointer-events:none;
     background:
-      radial-gradient(ellipse 40% 46% at 4% 26%, rgba(255,150,45,.34), transparent 66%),
-      radial-gradient(ellipse 40% 46% at 96% 26%, rgba(255,150,45,.34), transparent 66%),
-      linear-gradient(rgba(0,0,0,.35), transparent 18%, transparent 74%, rgba(0,0,0,.55)),
-      radial-gradient(ellipse 92% 76% at 50% 46%, transparent 30%, rgba(0,0,0,.86) 100%); }
-  /* 壁の松明 */
-  .torch { position:fixed; z-index:-1; width:16px; height:26px; }
-  .torch::before { content:""; position:absolute; bottom:0; left:3px; width:10px; height:13px;
-    border-radius:2px; background:linear-gradient(#5a4526,#2c2011); box-shadow:0 2px 4px rgba(0,0,0,.6); }
-  .torch::after { content:""; position:absolute; bottom:6px; left:-32px; width:80px; height:80px;
-    border-radius:50%; filter:blur(9px); opacity:.72;
-    background:radial-gradient(circle at 50% 60%, rgba(255,244,205,.95) 0%, rgba(255,180,70,.6) 30%, rgba(255,110,20,.28) 52%, rgba(255,90,10,0) 74%);
-    animation:flick 1.5s infinite ease-in-out; }
-  @keyframes flick { 0%,100%{transform:scale(1); opacity:1;} 40%{transform:scale(1.16) translateY(-2px); opacity:.78;} }
+      radial-gradient(ellipse 34% 40% at 6% 30%, rgba(255,158,58,.20), transparent 70%),
+      radial-gradient(ellipse 34% 40% at 94% 30%, rgba(255,158,58,.20), transparent 70%),
+      linear-gradient(rgba(0,0,0,.52), rgba(0,0,0,.10) 22%, rgba(0,0,0,.12) 62%, rgba(0,0,0,.66)),
+      radial-gradient(ellipse 88% 74% at 50% 48%, transparent 34%, rgba(0,0,0,.62) 100%);
+    animation:ember 5.5s ease-in-out infinite; }
+  @keyframes ember { 0%,100%{ opacity:1; } 50%{ opacity:.9; } }
+  /* 盤面のうしろに敷く舞台の敷物。カードの視認性を上げる */
+  #stageGlow { position:fixed; left:50%; top:52%; width:760px; height:390px; z-index:-1;
+    transform:translate(-50%,-50%); pointer-events:none; filter:blur(26px); opacity:.5;
+    background:radial-gradient(ellipse at center, rgba(0,0,0,.72) 0%, rgba(0,0,0,.42) 55%, transparent 78%); }
   /* ===== 上部バー ===== */
   #topbar { display:flex; align-items:flex-start; padding:6px 10px; gap:10px; height:64px; position:relative;
     background:linear-gradient(rgba(6,5,3,.88), rgba(10,8,5,.55) 60%, transparent);
@@ -153,12 +151,13 @@
     letter-spacing:2px; opacity:.66; text-shadow:0 2px 3px rgba(0,0,0,.9); }
   .laneHead span { width:116px; text-align:center; }
   .slot { border-radius:9px; position:relative; height:92px;
+    backdrop-filter:blur(2px) brightness(.62); -webkit-backdrop-filter:blur(2px) brightness(.62);
     background:
-      radial-gradient(ellipse at 50% 28%, rgba(255,244,210,.20), transparent 74%),
-      linear-gradient(165deg,#8d8471 0%,#645d4b 48%,#413b2e 100%);
-    border:2px solid #221e15;
-    box-shadow: inset 0 3px 4px rgba(255,246,220,.18), inset 0 -7px 12px rgba(0,0,0,.62),
-      0 7px 14px rgba(0,0,0,.62), 0 2px 3px rgba(0,0,0,.5); }
+      radial-gradient(ellipse at 50% 24%, rgba(255,246,214,.16), transparent 72%),
+      linear-gradient(165deg, rgba(28,25,18,.30) 0%, rgba(14,12,8,.46) 52%, rgba(6,5,3,.60) 100%);
+    border:1.5px solid rgba(226,197,128,.30);
+    box-shadow: inset 0 2px 3px rgba(255,246,220,.16), inset 0 -8px 14px rgba(0,0,0,.5),
+      0 8px 16px rgba(0,0,0,.48); }
   .slot.placeable { cursor:pointer; animation:pulse 1s infinite; animation-delay:calc(var(--pi,0)*0ms);
     border-color:#7CFC00; }
   @keyframes pulse { 0%,100%{box-shadow:0 0 4px #7CFC0055, inset 0 -4px 8px rgba(0,0,0,.55);}
@@ -209,7 +208,8 @@
   /* ===== 下部（手札） ===== */
   #bottombar { display:flex; align-items:flex-end; padding:6px 10px 8px; gap:10px; height:140px;
     position:relative;
-    background:linear-gradient(rgba(10,8,5,.35), rgba(12,9,6,.86) 30%, rgba(6,5,3,.95));
+    backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+    background:linear-gradient(rgba(10,8,5,.18), rgba(12,9,6,.72) 32%, rgba(6,5,3,.88));
     border-top:2px solid #6b5410;
     box-shadow:0 -6px 18px rgba(0,0,0,.55), inset 0 2px 0 rgba(217,178,74,.35); }
   #handArea { flex:1; display:flex; gap:4px; justify-content:center; align-items:flex-end; }
@@ -310,7 +310,8 @@
   #log div { margin-top:2px; margin-left:auto; background:rgba(0,0,0,.35); border-radius:6px; padding:1px 7px;
     width:fit-content; max-width:100%; animation:logfade 7s forwards; }
   @keyframes logfade { 0%,75%{opacity:1;} 100%{opacity:.12;} }
-  .overlay { position:fixed; inset:0; background:rgba(4,6,12,.88); display:none; flex-direction:column;
+  .overlay { position:fixed; inset:0; background:rgba(4,6,12,.76);
+    backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); display:none; flex-direction:column;
     align-items:center; justify-content:center; z-index:100; }
   .overlay h1 { font-size:38px; margin-bottom:14px; color:#ffe9a0; text-shadow:0 4px 10px #000; }
   .overlay .sub { font-size:13px; color:#9db0c8; margin-bottom:12px; }
@@ -348,16 +349,19 @@
   #detail .dtxt { font-size:11px; color:#dbe4f2; line-height:1.55; margin-top:4px;
     border-top:1px solid rgba(217,178,74,.28); padding-top:5px; }
   /* ===== メタ画面（ホーム／ガチャ／錬金／デッキ） ===== */
+  body.screenOn #stage, body.screenOn #bgDust, body.screenOn #stageGlow { visibility:hidden; }
   #screen { position:fixed; inset:0; z-index:120; display:none; flex-direction:column; overflow:auto;
     padding:16px 20px 24px;
+    /* 背景画を透かして見せる */
+    backdrop-filter:blur(3px) saturate(.9); -webkit-backdrop-filter:blur(3px) saturate(.9);
     background:
-      radial-gradient(ellipse 50% 40% at 8% 12%, rgba(255,146,40,.14), transparent 60%),
-      radial-gradient(ellipse 50% 40% at 92% 12%, rgba(255,146,40,.14), transparent 60%),
-      linear-gradient(#0a0d16 0%, #121826 45%, #080a12 100%); }
+      radial-gradient(ellipse 50% 40% at 8% 12%, rgba(255,146,40,.16), transparent 60%),
+      radial-gradient(ellipse 50% 40% at 92% 12%, rgba(255,146,40,.16), transparent 60%),
+      linear-gradient(rgba(8,10,17,.74) 0%, rgba(16,21,34,.52) 45%, rgba(6,8,15,.84) 100%); }
   #screen.on { display:flex; }
   .scHead { display:flex; align-items:center; gap:14px; margin-bottom:12px; flex-shrink:0; }
   .scHead h2 { font-size:22px; color:#ffe9a0; text-shadow:0 3px 6px #000; }
-  .purse { margin-left:auto; display:flex; gap:10px; }
+  .purse { margin-left:auto; margin-right:44px; display:flex; gap:10px; }
   .purse span { background:linear-gradient(rgba(18,24,38,.95),rgba(8,11,20,.96));
     border:1px solid #6b5410; border-radius:9px; padding:5px 12px; font-size:13px; color:#ffe9a0; }
   .btn { background:linear-gradient(#f7e6b0 0%,#d9b24a 45%,#b98d2a 55%,#dfc270 100%);
@@ -562,15 +566,12 @@
 </defs></svg>
 
 <div id="bg">
-  <div id="bgWall"><div id="bgArches"></div></div>
-  <div id="bgFloor"><div id="bgGrid"></div></div>
-  <div id="bgHorizon"></div>
+  <div class="bgLayer" id="bgA"></div>
+  <div class="bgLayer" id="bgB"></div>
 </div>
 <div id="bgVig"></div>
-<span class="torch" style="left:52px; top:126px;"></span>
-<span class="torch" style="right:52px; top:126px;"></span>
-<span class="torch" style="left:212px; top:104px;"></span>
-<span class="torch" style="right:212px; top:104px;"></span>
+<div id="bgDust"></div>
+<div id="stageGlow"></div>
 
 <span class="deco" style="left:6px; top:76px;">🔥</span>
 <span class="deco" style="right:6px; bottom:150px;">🔥</span>
@@ -651,7 +652,7 @@
 <button id="cancelBtn">✕ やめる</button>
 <button id="discardBtn">🗑 このカードを捨てる</button>
 <button id="potionBtn">🧪 まほうのせいすい（MP+1）</button>
-<button id="bgmBtn" title="音楽のオン・オフ">🔊</button>
+<button id="bgmBtn" title="音楽のオン・オフ" onclick="bgmToggle()">🔊</button>
 
 <div class="overlay" id="classSel">
   <h1>リーダーを選択</h1>
@@ -1198,101 +1199,249 @@ function noise(dur,vol,delay,freq){
   g.gain.setValueAtTime(vol,t+delay); g.gain.exponentialRampToValueAtTime(.001,t+delay+dur);
   s.start(t+delay); s.stop(t+delay+dur);
 }
-// ============ RPG風BGM（WebAudioで合成・外部ファイル不要） ============
-const NOTE={C3:130.81,D3:146.83,E3:164.81,F3:174.61,G3:196,A3:220,Bb3:233.08,B3:246.94,
- C4:261.63,D4:293.66,Eb4:311.13,E4:329.63,F4:349.23,G4:392,A4:440,Bb4:466.16,B4:493.88,
- C5:523.25,D5:587.33,Eb5:622.25,E5:659.25,F5:698.46,G5:783.99,A5:880,Bb5:932.33,C6:1046.5};
-// 場面ごとの曲。ホームは穏やか、対戦は勇壮、勝利はファンファーレ
-const TUNES={
- home:{bpm:88, mel:[
-   ["A4",1],["C5",1],["D5",2],["C5",1],["A4",1],["G4",2],
-   ["F4",1],["G4",1],["A4",2],["G4",1],["F4",.5],["E4",.5],["D4",2],
-   ["A4",1],["D5",1],["F5",2],["E5",1],["D5",1],["C5",2],
-   ["Bb4",1],["A4",1],["G4",2],["A4",4]],
-  bass:[["D3",4],["F3",4],["C3",4],["G3",4],["D3",4],["Bb3",4],["F3",4],["A3",4]]},
- battle:{bpm:112, mel:null, bass:null},   // 既存のTHEME/BASSを使う
- win:{bpm:120, mel:[
-   ["D5",.5],["F5",.5],["A5",1],["G5",.5],["A5",.5],["C6",2],
-   ["A5",1],["F5",1],["D5",2],[null,2]],
-  bass:[["D3",2],["A3",2],["Bb3",2],["D3",2]], once:true},
+// ============ 背景の切り替え（クロスフェード） ============
+const BG_SET={
+  arena:{ file:"bg-arena.jpg",  tint:"warm" },
+  ice:  { file:"bg-arena2.jpg", tint:"cold" }
 };
-// 主旋律（音名, 長さ拍） 8分=0.5 / 4分=1
-const THEME=[
- ["D5",1],["A4",.5],["D5",.5],["F5",1],["E5",1],
- ["D5",1],["C5",.5],["D5",.5],["E5",2],
- ["F5",1],["E5",.5],["D5",.5],["C5",1],["A4",1],
- ["Bb4",1.5],["A4",.5],["G4",2],
- ["D5",1],["F5",.5],["A5",.5],["G5",1],["F5",1],
- ["E5",1.5],["D5",.5],["C5",2],
- ["Bb4",1],["C5",1],["D5",1],["E5",1],
- ["D5",3],[null,1],
-];
-// 伴奏（コード根音）
-const BASS=[["D3",4],["A3",4],["Bb3",4],["G3",4],["D3",4],["A3",4],["Bb3",4],["D3",4]];
-let BGM={on:true, timer:null, t:0, mi:0, bi:0, gain:null, started:false, scene:"home"};
-function curTune(){
-  const t=TUNES[BGM.scene]||TUNES.battle;
-  return { bpm:t.bpm, mel:t.mel||THEME, bass:t.bass||BASS, once:!!t.once };
+let BG_CUR=null, BG_FLIP=false;
+function bgUrl(file){
+  if(window.__ART__ && window.__ART__[file]) return window.__ART__[file];
+  return "art/"+file;
 }
-// 場面が変わったら曲を切り替える
-function bgmScene(name){
-  if(BGM.scene===name) return;
-  BGM.scene=name; BGM.mi=0; BGM.bi=0;
-  if(AC&&BGM.started){ BGM.t=AC.currentTime+0.05; }
+function setBg(name){
+  const def=BG_SET[name]||BG_SET.arena;
+  if(BG_CUR===name) return;
+  BG_CUR=name;
+  const show=document.getElementById(BG_FLIP?"bgA":"bgB");
+  const hide=document.getElementById(BG_FLIP?"bgB":"bgA");
+  BG_FLIP=!BG_FLIP;
+  show.style.backgroundImage='url("'+bgUrl(def.file)+'")';
+  // 画像が読めてから切り替える（黒画面をはさまない）
+  const img=new Image();
+  img.onload=img.onerror=()=>{ show.classList.add("on"); hide.classList.remove("on"); };
+  img.src=bgUrl(def.file);
+  // 光の色みを場所に合わせる
+  const v=document.getElementById("bgVig");
+  v.style.filter = def.tint==="cold" ? "hue-rotate(172deg) saturate(.85)" : "none";
 }
-function bgmGain(){
-  if(!BGM.gain){ BGM.gain=AC.createGain(); BGM.gain.gain.value=0.13; BGM.gain.connect(MASTER||AC.destination); }
-  return BGM.gain;
+function preloadBg(){ Object.values(BG_SET).forEach(d=>{ const i=new Image(); i.src=bgUrl(d.file); }); }
+
+// ============ BGM（WebAudio合成：残響・ドラム・和音進行つき） ============
+const NOTE={C2:65.41,D2:73.42,E2:82.41,F2:87.31,G2:98,A2:110,Bb2:116.54,B2:123.47,
+ C3:130.81,Db3:138.59,D3:146.83,Eb3:155.56,E3:164.81,F3:174.61,G3:196,A3:220,Bb3:233.08,B3:246.94,
+ C4:261.63,Db4:277.18,D4:293.66,Eb4:311.13,E4:329.63,F4:349.23,G4:392,A4:440,Bb4:466.16,B4:493.88,
+ C5:523.25,Db5:554.37,D5:587.33,Eb5:622.25,E5:659.25,F5:698.46,G5:783.99,A5:880,Bb5:932.33,C6:1046.5,D6:1174.7};
+
+// 和音は実音で持つ
+const CH={
+ Dm:["D3","F3","A3"], Bb:["Bb2","D3","F3"], F:["F2","A2","C3"], C:["C3","E3","G3"],
+ Gm:["G2","Bb2","D3"], Am:["A2","C3","E3"], A7:["A2","Db3","G3"], Eb:["Eb3","G3","Bb3"]
+};
+
+// prog=[コード名,小節数] / mel=[音名 or null, 拍数]（合計が4の倍数になるよう作る）
+const TUNES={
+ home:{ bpm:82, drums:"soft",
+   prog:[["Dm",2],["Bb",2],["F",2],["C",2],["Bb",2],["Gm",2],["Am",2],["Dm",2]],
+   mel:[["A4",1.5],["D5",.5],["F5",1],["E5",1],
+        ["D5",1.5],["A4",.5],["Bb4",2],
+        ["C5",1.5],["F5",.5],["A5",1],["G5",1],
+        ["F5",2],["E5",2],
+        ["D5",1],["C5",1],["Bb4",1],["A4",1],
+        ["G4",2],[null,2],
+        ["A4",1],["Bb4",1],["C5",1],["D5",1],
+        ["A4",3],[null,1]] },
+ battle:{ bpm:126, drums:"hard",
+   prog:[["Dm",2],["Bb",2],["C",2],["Dm",2],["Gm",2],["Bb",2],["C",2],["A7",2]],
+   mel:[["D5",.5],["A4",.5],["D5",.5],["F5",.5],["E5",1],["D5",1],
+        ["Bb4",.5],["D5",.5],["F5",.5],["A5",.5],["G5",2],
+        ["C5",.5],["E5",.5],["G5",.5],["C6",.5],["Bb5",1],["A5",1],
+        ["D5",.5],["F5",.5],["A5",.5],["D6",.5],["A5",2],
+        ["G4",.5],["Bb4",.5],["D5",.5],["G5",.5],["F5",1],["D5",1],
+        ["Bb4",.5],["D5",.5],["F5",.5],["Bb5",.5],["A5",2],
+        ["C5",.5],["G5",.5],["E5",.5],["C5",.5],["D5",1],["E5",1],
+        ["F5",.5],["E5",.5],["D5",.5],["C5",.5],["A4",2]] },
+ win:{ bpm:130, drums:"hard", once:true,
+   prog:[["Dm",1],["Bb",1],["F",1],["C",1],["Dm",2]],
+   mel:[["D5",.5],["F5",.5],["A5",1],
+        ["G5",.5],["A5",.5],["C6",1],
+        ["A5",.5],["F5",.5],["D5",1],
+        ["A5",1],["D6",1],
+        ["D6",4]] },
+};
+
+let BGM={on:true, timer:null, t:0, mi:0, bar:0, started:false, scene:"home",
+         master:null, conv:null, buses:null};
+
+// 残響用のインパルス応答をその場で合成する
+function makeIR(sec, decay){
+  const rate=AC.sampleRate, len=Math.floor(rate*sec), buf=AC.createBuffer(2,len,rate);
+  for(let ch=0;ch<2;ch++){
+    const d=buf.getChannelData(ch);
+    for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/len,decay);
+  }
+  return buf;
 }
-function bgmNote(freq,start,dur,type,vol,detune){
-  if(!freq) return;
+// 送り量ごとに固定のバスを用意する（音ごとに作らないのでノードが溜まらない）
+const SENDS=[0,0.1,0.25,0.4,0.6];
+function bgmInit(){
+  if(BGM.master) return;
+  BGM.master=AC.createGain(); BGM.master.gain.value=0.34;
+  const comp=AC.createDynamicsCompressor();
+  comp.threshold.value=-15; comp.ratio.value=3.2; comp.attack.value=0.006; comp.release.value=0.2;
+  BGM.master.connect(comp); comp.connect(MASTER||AC.destination);
+  BGM.conv=AC.createConvolver(); BGM.conv.buffer=makeIR(2.8, 2.6);
+  const wet=AC.createGain(); wet.gain.value=0.42;
+  BGM.conv.connect(wet); wet.connect(BGM.master);
+  BGM.buses=SENDS.map(v=>{
+    const g=AC.createGain(); g.gain.value=1; g.connect(BGM.master);
+    if(v>0){ const w=AC.createGain(); w.gain.value=v; g.connect(w); w.connect(BGM.conv); }
+    return g;
+  });
+}
+function bus(send){
+  let best=0, diff=9;
+  SENDS.forEach((v,i)=>{ const d=Math.abs(v-send); if(d<diff){ diff=d; best=i; } });
+  return BGM.buses[best];
+}
+// 音色つきの1音
+function tone(freq,start,dur,o){
+  if(!freq||!BGM.buses) return;
+  o=o||{};
+  const f=AC.createBiquadFilter();
+  f.type="lowpass"; f.frequency.value=o.cut||2600; f.Q.value=o.q||0.7;
+  f.connect(bus(o.send===undefined?0.25:o.send));
+  const g=AC.createGain(); g.connect(f);
+  const peak=o.vol===undefined?0.2:o.vol;
+  const atk=o.atk===undefined?0.012:o.atk, rel=o.rel===undefined?0.22:o.rel;
+  g.gain.setValueAtTime(0.0001,start);
+  g.gain.exponentialRampToValueAtTime(peak,start+atk);
+  g.gain.setValueAtTime(peak,start+Math.max(atk+0.001,dur-rel));
+  g.gain.exponentialRampToValueAtTime(0.0006,start+dur);
+  if(o.sweep){
+    f.frequency.setValueAtTime((o.cut||2600)*0.45,start);
+    f.frequency.linearRampToValueAtTime(o.cut||2600,start+0.11);
+  }
+  // 少しずらした発振器を重ねて厚みを出す
+  const det=o.detune||[0];
+  let last=null;
+  det.forEach(c=>{
+    const osc=AC.createOscillator();
+    osc.type=o.type||"triangle"; osc.frequency.value=freq; osc.detune.value=c;
+    if(o.vib){
+      const lfo=AC.createOscillator(), la=AC.createGain();
+      lfo.frequency.value=5.4; la.gain.value=o.vib;
+      lfo.connect(la); la.connect(osc.detune);
+      lfo.start(start); lfo.stop(start+dur+0.05);
+      osc.onended=()=>{ try{ lfo.disconnect(); la.disconnect(); }catch(e){} };
+    }
+    osc.connect(g); osc.start(start); osc.stop(start+dur+0.05);
+    last=osc;
+  });
+  if(last) last.onended=()=>{ try{ g.disconnect(); f.disconnect(); }catch(e){} };
+}
+function noiseHit(t,hp,vol,decay,send){
+  if(!BGM.buses) return;
+  const s=AC.createBufferSource(); s.buffer=NOISEBUF;
+  const f=AC.createBiquadFilter(); f.type="highpass"; f.frequency.value=hp;
+  const g=AC.createGain();
+  s.connect(f); f.connect(g); g.connect(bus(send));
+  g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(0.0008,t+decay);
+  s.start(t); s.stop(t+decay+0.02);
+  s.onended=()=>{ try{ g.disconnect(); f.disconnect(); }catch(e){} };
+}
+function drumKick(t,vol){
+  if(!BGM.buses) return;
   const o=AC.createOscillator(), g=AC.createGain();
-  o.type=type; o.frequency.value=freq; if(detune) o.detune.value=detune;
-  o.connect(g); g.connect(bgmGain());
-  g.gain.setValueAtTime(0,start);
-  g.gain.linearRampToValueAtTime(vol,start+0.03);
-  g.gain.setValueAtTime(vol,start+dur*0.7);
-  g.gain.exponentialRampToValueAtTime(0.0008,start+dur);
-  o.start(start); o.stop(start+dur+0.02);
+  o.type="sine"; o.connect(g); g.connect(bus(0.1));
+  o.frequency.setValueAtTime(155,t); o.frequency.exponentialRampToValueAtTime(44,t+0.1);
+  g.gain.setValueAtTime(vol||0.5,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.23);
+  o.start(t); o.stop(t+0.25);
+  o.onended=()=>{ try{ g.disconnect(); }catch(e){} };
 }
+function curTune(){ return TUNES[BGM.scene]||TUNES.battle; }
+function bgmScene(name){
+  if(!TUNES[name]||BGM.scene===name) return;
+  BGM.scene=name; BGM.mi=0; BGM.bar=0;
+  if(AC&&BGM.started) BGM.t=AC.currentTime+0.06;
+}
+function totalBars(T){ return T.prog.reduce((n,x)=>n+x[1],0); }
+function chordAt(T,bar){
+  let acc=0;
+  for(const [name,len] of T.prog){ if(bar<acc+len) return CH[name]; acc+=len; }
+  return CH[T.prog[0][0]];
+}
+
 function bgmSchedule(){
-  if(!AC||!BGM.on) return;
-  const T=curTune(), beat=60/T.bpm, ahead=1.2;
+  if(!AC||!BGM.on||!BGM.master) return;
+  const T=curTune(), beat=60/T.bpm, barLen=beat*4, ahead=1.6;
   while(BGM.t < AC.currentTime+ahead){
     if(BGM.t < AC.currentTime) BGM.t=AC.currentTime+0.05;
-    if(T.once && BGM.mi>=T.mel.length){ bgmScene("home"); return; }   // 勝利ファンファーレは1回だけ
-    const [n,d]=T.mel[BGM.mi%T.mel.length];
-    const dur=d*beat;
-    bgmNote(NOTE[n],BGM.t,dur*0.95,"triangle",0.20);          // 主旋律
-    bgmNote(NOTE[n]?NOTE[n]/2:0,BGM.t,dur*0.9,"sine",0.07);    // 1オクターブ下で厚み
-    // 伴奏: 1拍ごとに根音と5度を刻む
-    const [bn]=T.bass[BGM.bi%T.bass.length];
-    for(let k=0;k<d;k++){
-      bgmNote(NOTE[bn],BGM.t+k*beat,beat*0.42,"sawtooth",0.055);
-      bgmNote(NOTE[bn]*1.5,BGM.t+k*beat+beat*0.5,beat*0.3,"sawtooth",0.032);
+    if(T.once && BGM.bar>=totalBars(T)){ bgmScene("home"); return; }
+    const t0=BGM.t, b=BGM.bar%totalBars(T), ch=chordAt(T,b), hard=T.drums==="hard";
+
+    // 和音のパッド（長く伸ばして空気をつくる）
+    ch.forEach(n=>tone(NOTE[n]*2,t0,barLen*0.99,
+      {type:"sawtooth",vol:0.05,atk:0.4,rel:0.7,cut:820,send:0.6,detune:[-8,8]}));
+
+    // ベース
+    const root=NOTE[ch[0]];
+    for(let k=0;k<4;k++)
+      tone(k===2?root*1.5:root, t0+k*beat, beat*0.9,
+        {type:"sawtooth",vol:0.21,atk:0.006,rel:0.1,cut:480,send:0.1,sweep:1});
+
+    // 対旋律のアルペジオ（速い曲だけ）
+    if(hard) for(let k=0;k<8;k++)
+      tone(NOTE[ch[k%3]]*2, t0+k*beat/2, beat*0.42,
+        {type:"triangle",vol:0.055,atk:0.004,rel:0.09,cut:3400,send:0.4});
+
+    // ドラム
+    drumKick(t0, hard?0.55:0.4);
+    if(hard) drumKick(t0+beat*2.5,0.4);
+    noiseHit(t0+beat,   1500, hard?0.22:0.13, 0.15, 0.25);
+    noiseHit(t0+beat*3, 1500, hard?0.22:0.13, 0.15, 0.25);
+    const div=hard?8:4;
+    for(let k=0;k<div;k++) noiseHit(t0+k*barLen/div, 7500, hard?(k%2?0.035:0.07):0.045, 0.045, 0.1);
+
+    // 主旋律（この小節ぶんを敷き詰める）
+    let mt=t0, remain=4;
+    while(remain>0.001){
+      const [n,d]=T.mel[BGM.mi%T.mel.length];
+      const use=Math.min(d,remain);
+      if(n){
+        tone(NOTE[n], mt, use*beat*0.96,
+          {type:"triangle",vol:0.21,atk:0.014,rel:0.18,cut:4400,send:0.35,detune:[-6,6],vib:7});
+        tone(NOTE[n]/2, mt, use*beat*0.9,
+          {type:"sine",vol:0.06,atk:0.02,rel:0.18,cut:1600,send:0.25});
+      }
+      mt+=use*beat; remain-=use;
+      if(use>=d) BGM.mi++; else break;
     }
-    BGM.t+=dur; BGM.mi++;
-    if(BGM.mi%4===0) BGM.bi++;
+    BGM.t+=barLen; BGM.bar++;
   }
 }
 function bgmStart(){
   if(!AC||BGM.started||!BGM.on) return;
-  acInit(); BGM.started=true; BGM.t=AC.currentTime+0.1;
+  acInit(); bgmInit();
+  BGM.started=true; BGM.t=AC.currentTime+0.15;
   bgmSchedule();
-  BGM.timer=setInterval(bgmSchedule,400);
+  BGM.timer=setInterval(bgmSchedule,430);
 }
 function bgmStop(){
   BGM.started=false;
   if(BGM.timer){ clearInterval(BGM.timer); BGM.timer=null; }
-  if(BGM.gain){ try{ BGM.gain.gain.setTargetAtTime(0,AC.currentTime,0.08); }catch(e){} }
+  if(BGM.master){ try{ BGM.master.gain.setTargetAtTime(0,AC.currentTime,0.1); }catch(e){} }
 }
 function bgmToggle(){
   BGM.on=!BGM.on;
   try{ localStorage.setItem("ct_bgm", BGM.on?"1":"0"); }catch(e){}
-  if(BGM.on){ if(BGM.gain) BGM.gain.gain.setTargetAtTime(0.13,AC.currentTime,0.1); BGM.started=false; bgmStart(); }
-  else bgmStop();
+  if(BGM.on){
+    if(BGM.master) BGM.master.gain.setTargetAtTime(0.34,AC.currentTime,0.12);
+    BGM.started=false; bgmStart();
+  } else bgmStop();
   const b=document.getElementById("bgmBtn"); if(b) b.textContent=BGM.on?"🔊":"🔇";
 }
+
 function sfx(kind){
   try{
     if(SIM||!AC) return;
@@ -1603,6 +1752,7 @@ function startGame(clsP, clsE, opt){
   }
   labelSides();
   bgmScene("battle");
+  setBg(["mage","priest","thief"].includes(clsE) ? "ice" : "arena");
   document.getElementById("log").innerHTML="";
   showDetail(null); restorePedestals(); render();
   if(MODE==="pvp"){
@@ -3004,6 +3154,7 @@ function showHome(){
   document.getElementById("handoff").style.display="none";
   busy=true; S=null;
   bgmScene("home");
+  setBg("arena");
   const total=POOL.length, have=POOL.filter(c=>owned(c.n)>0).length;
   const d=dailyState();
   openScreen(`<div class="scHead"><h2>アリーナ・カードタクティクス</h2>${purse()}</div>
@@ -3554,6 +3705,15 @@ window.simGame=simGame; window.simMatrix=simMatrix;
 
 loadSave();
 preloadArt();
+preloadBg();
+setBg("arena");
+// 全画面パネルの表示状態を body に伝える（背景の見せ方を切り替えるため）
+(function(){
+  const sc=document.getElementById("screen");
+  const sync=()=>document.body.classList.toggle("screenOn", sc.classList.contains("on"));
+  new MutationObserver(sync).observe(sc,{attributes:true,attributeFilter:["class"]});
+  sync();
+})();
 fitStage();
 if(!SAVE.tuto) showFirstBoot(); else showHome();
 // スクリーンショット用: ?shot=gacha / deck
