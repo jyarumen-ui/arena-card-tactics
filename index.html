@@ -456,6 +456,24 @@
     .menuCard:hover, .clsCard:hover { transform:none; }
     .card:active { transform:translateY(-8px) scale(1.04); }
   }
+  /* チュートリアル */
+  #tutoMask { position:fixed; inset:0; z-index:57; background:rgba(2,4,10,.5); display:none; pointer-events:none; }
+  #tutoMask.on { display:block; }
+  .tutoGlow { position:relative; z-index:59 !important;
+    box-shadow:0 0 0 3px #ffe9a0, 0 0 22px 8px rgba(255,210,48,.6) !important;
+    animation:tglow 1s infinite; border-radius:8px; }
+  @keyframes tglow { 50%{ box-shadow:0 0 0 4px #fff6cc, 0 0 30px 12px rgba(255,210,48,.85) !important; } }
+  #tutoBubble { position:fixed; left:50%; bottom:152px; transform:translateX(-50%); z-index:63; display:none;
+    max-width:min(600px,90vw); padding:13px 20px; border-radius:14px; font-size:15px; line-height:1.75;
+    background:linear-gradient(rgba(18,24,38,.99),rgba(8,11,20,1));
+    border:2px solid #d9b24a; box-shadow:0 12px 30px rgba(0,0,0,.85); white-space:pre-line; text-align:left; }
+  #tutoBubble.on { display:block; }
+  #tutoBubble b { color:#ffe9a0; }
+  #tutoBubble .row { display:flex; gap:10px; align-items:center; margin-top:9px; }
+  #tutoBubble button { font-size:13px; padding:6px 16px; border-radius:16px; cursor:pointer; border:none;
+    background:linear-gradient(#f7e6b0,#d9b24a 55%,#b98d2a); color:#4a3600; font-weight:bold; }
+  #tutoBubble .skip { background:rgba(70,80,96,.9); color:#dbe4f2; font-weight:normal; }
+  #tutoBubble.nudge { animation:shakeA .32s; }
   /* 初心者向け: 中央に大きく出る案内トースト */
   #coach { position:fixed; left:50%; bottom:150px; transform:translateX(-50%); z-index:62; display:none;
     max-width:min(560px, 88vw); padding:11px 18px; border-radius:14px; font-size:14px; line-height:1.7;
@@ -590,6 +608,8 @@
 <div class="cancelHint" id="cancelHint">対象を選択（右クリックでキャンセル）</div>
 <div id="atkBar"></div>
 <div id="coach"></div>
+<div id="tutoMask"></div>
+<div id="tutoBubble"></div>
 <button id="cancelBtn">✕ やめる</button>
 <button id="discardBtn">🗑 このカードを捨てる</button>
 <button id="potionBtn">🧪 まほうのせいすい（MP+1）</button>
@@ -1483,9 +1503,11 @@ function handoff(txt, cb){
   h.style.display="flex";
   document.getElementById("handoffBtn").onclick=()=>{ h.style.display="none"; cb(); };
 }
-function startGame(clsP, clsE){
+function startGame(clsP, clsE, opt){
+  opt=opt||{};
   document.getElementById("classSel").style.display="none";
   document.getElementById("screen").classList.remove("on");
+  tutoEnd();
   const keys=Object.keys(CLASSES);
   const eCls = clsE || keys[Math.floor(Math.random()*keys.length)];
   LAST={clsP, clsE, mode:MODE, lv:AI_LEVEL};
@@ -1498,6 +1520,15 @@ function startGame(clsP, clsE){
     const ret=S.e.hand.filter(c=>c.c>=5);
     if(ret.length){ S.e.hand=S.e.hand.filter(c=>c.c<5); draw(S.e,ret.length);
       ret.forEach(c=>S.e.deck.push(c)); shuffle(S.e.deck); }
+  }
+  if(opt.tuto){
+    MODE="tuto"; TUTO.on=true; TUTO.step=0;
+    S.e.hp=12; S.eMax=12;
+    S.p.hand=TUTO_HAND.map(tutoCard);
+    S.p.deck=TUTO_DRAW.slice().reverse().map(tutoCard)
+      .concat(Array(12).fill(0).map(()=>tutoCard("ぷにまる")));
+    S.e.hand=[]; S.e.tension=0; S.e.potion=false;
+    document.getElementById("vsE").textContent="訓練相手";
   }
   labelSides();
   document.getElementById("log").innerHTML="";
@@ -1514,11 +1545,14 @@ function startGame(clsP, clsE){
         });
       });
     });
+  } else if(opt.tuto){
+    startTurn("p"); busy=false; banner("チュートリアル"); render();
   } else {
     showMulligan(()=>{ startTurn("p"); busy=false; banner("あなたのターン"); render(); });
   }
 }
 function rematch(){
+  if(MODE==="tuto"){ startGame("sword","mage",{tuto:true}); return; }
   if(!LAST) return showHome();
   MODE=LAST.mode; AI_LEVEL=LAST.lv;
   startGame(LAST.clsP, LAST.clsE);
@@ -1774,7 +1808,15 @@ function checkWin(){
     S.over=true;
     const pWin=S.e.hp<=0;
     let txt, rew="";
-    if(MODE==="pvp"){
+    if(MODE==="tuto"){
+      tutoEnd();
+      if(pWin){
+        txt="🏆 はじめての勝利！"; sfx("win");
+        if(!SAVE.tuto){ SAVE.tuto=1; SAVE.gold+=300; rew="ゴールド +300　これでカードパックが3回引けます"; }
+        else rew="おつかれさまでした";
+      } else { txt="ここまで！"; rew="もう一度ためせます"; sfx("lose"); }
+      saveNow();
+    } else if(MODE==="pvp"){
       const w = pWin ? S.pnum : (S.pnum===1?2:1);
       txt=`🏆 プレイヤー${w} のかち！`;
       sfx("win");
@@ -2165,7 +2207,7 @@ function endTurn(){
   startTurn("e");
   render();
   const gid=S.gid;
-  setTimeout(()=>{ if(S&&S.gid===gid) aiTurn(); }, 900);
+  setTimeout(()=>{ if(S&&S.gid===gid) (MODE==="tuto"?tutoEnemyTurn():aiTurn()); }, 900);
 }
 function startTurn(side){
   const pl=S[side];
@@ -2595,7 +2637,7 @@ function render(){
   document.getElementById("hpP").textContent=S.p.hp;
   document.getElementById("hpE").textContent=S.e.hp;
   document.getElementById("hpbarP").style.width=Math.max(0,S.p.hp/25*100)+"%";
-  document.getElementById("hpbarE").style.width=Math.max(0,S.e.hp/25*100)+"%";
+  document.getElementById("hpbarE").style.width=Math.max(0,S.e.hp/(S.eMax||25)*100)+"%";
   document.getElementById("clsP").textContent=CLASSES[S.p.cls].n;
   document.getElementById("clsE").textContent=CLASSES[S.e.cls].n;
   document.getElementById("mpTxtP").innerHTML=`<b>${S.p.mp}</b>/${S.p.mpMax}`;
@@ -2647,6 +2689,7 @@ function render(){
     : S.pending.type==="use"   ? "もう一度カードを押すと使えます"
     : "効果の対象を選んでください";
   document.getElementById("enemyThink").textContent = busy&&S.p.hp>0&&S.e.hp>0 ? "考え中…" : "";
+  if(TUTO.on) tutoPaint();
   flushFX();
 }
 
@@ -2730,6 +2773,7 @@ function showHome(){
     <p class="hint2" style="margin-top:12px">コレクション ${have} / ${total} 種　｜　${SAVE.wins}勝 ${SAVE.losses}敗　｜　今日 ${d.wins}勝</p>
     <div style="display:flex;gap:8px;justify-content:center;margin-top:10px">
       <button class="btn sub" id="howto">📖 あそびかた</button>
+      <button class="btn sub" id="tutoBtn">🎓 チュートリアル</button>
       <button class="btn sub" id="saveIO">💾 データの引き継ぎ</button>
     </div>`);
   scr().querySelectorAll("[data-go]").forEach(el=>el.onclick=()=>{
@@ -2738,9 +2782,28 @@ function showHome(){
     else if(g==="gacha") showGacha(); else showAlchemy();
   });
   scr().querySelector("#howto").onclick=showHowTo;
+  scr().querySelector("#tutoBtn").onclick=()=>{ MODE="tuto"; AI_LEVEL=1; startGame("sword","mage",{tuto:true}); };
   scr().querySelector("#saveIO").onclick=showSaveIO;
 }
 
+// ================= 初回起動 =================
+function showFirstBoot(){
+  document.getElementById("classSel").style.display="none";
+  document.getElementById("mullOv").style.display="none";
+  busy=true; S=null;
+  openScreen(`<div style="margin:auto;text-align:center;max-width:620px">
+      <h1 style="font-size:32px;color:#ffe9a0;text-shadow:0 4px 10px #000;margin-bottom:6px">アリーナ・カードタクティクス</h1>
+      <p class="hint2" style="font-size:14px;margin-bottom:18px">盤面にモンスターを並べて戦う、ターン制のカードバトル。</p>
+      <div style="display:flex;justify-content:center;gap:10px;margin-bottom:14px">
+        ${["LEADER_sword","LEADER_mage","LEADER_priest"].map(k=>`<div style="width:96px">${art(k,96)||""}</div>`).join("")}
+      </div>
+      <p style="font-size:16px;color:#fff;margin-bottom:16px"><b>遊びながら覚えられます。3分で1勝できます。</b></p>
+      <button class="btn" id="fbStart" style="font-size:17px;padding:12px 34px">▶ はじめる</button>
+      <div style="margin-top:12px"><button class="btn sub" id="fbSkip" style="font-size:12px">説明はいらない（ホームへ）</button></div>
+    </div>`);
+  scr().querySelector("#fbStart").onclick=()=>{ MODE="tuto"; AI_LEVEL=1; startGame("sword","mage",{tuto:true}); };
+  scr().querySelector("#fbSkip").onclick=()=>{ SAVE.tuto=1; saveNow(); showHome(); };
+}
 // ================= あそびかた =================
 function showHowTo(){
   openScreen(`<div class="scHead"><button class="btn sub" id="bk">← もどる</button><h2>あそびかた</h2></div>
@@ -2999,6 +3062,95 @@ function showDeckEdit(cls){
   };
 }
 
+// ================= 対話式チュートリアル =================
+let TUTO={on:false, step:0};
+const TUTO_ENEMY={   // 相手の行動は完全固定（AIを使わない）
+  1:[],
+  2:[{sum:"トゲガメ", slot:1}],
+  3:[{sum:"カマイタチ", slot:0},{atk:0,tgt:1}],
+  4:[{sum:"ガーディアン", slot:1}],
+  5:[{sum:"サラマンドラ", slot:2}]
+};
+// 手札に配る順（先頭から配られる）
+const TUTO_HAND=["ぷにまる","サラマンドラ","いかずちの矢"];
+const TUTO_DRAW=["みならい魔導士","チビドラ","サンダーボルト","ヒーリング","ぷにまる","デスロード"];
+
+function tutoCard(n){ const c=POOL.find(x=>x.n===n); return c?{...c}:{...POOL[0]}; }
+function handHas(n){ return S.p.hand.some(c=>c.n===n); }
+function boardHas(n){ return S.p.board.some(u=>u&&u.n===n); }
+function myUnits(){ return S.p.board.filter(Boolean).length; }
+
+const TUTO_STEPS=[
+ {say:"ようこそ。<b>3分で1勝</b>できるよう案内します。\nまずは目的から。<b>相手リーダーのHPを0にすれば勝ち</b>です。いまは12。",
+  hi:"#pedE", next:true},
+ {say:"カードを出すには<b>MP</b>がいります。いまのMPは<b>1</b>。\nMPは毎ターン1ずつ増えて、最大10まで上がります。",
+  hi:"#zoneP .mpnum, #zoneP .mpgems", next:true},
+ {say:"手札の<b>ぷにまる</b>（コスト1）をタップしてみましょう。",
+  hi:"#handArea .card", done:()=>S.pending&&S.pending.type==="place"},
+ {say:"置ける場所が光りました。\n<b>前衛</b>は自分から殴られる盾、<b>後衛</b>は真上に前衛がいる間は守られます。\nいまは<b>前衛のまん中</b>に置いてみましょう。",
+  hi:'[data-cell="p-1"]', done:()=>boardHas("ぷにまる")},
+ {say:"出したばかりのユニットは<b>そのターンは攻撃できません</b>（😴の印）。\n「ターン終了」を押しましょう。",
+  hi:"#endBtn", done:()=>S.turn>=2},
+ {say:"MPが<b>2</b>になりました。\nぷにまるが緑に光っています。これが「動ける」印です。タップしてみましょう。",
+  hi:'[data-cell="p-1"] .unit', done:()=>S.sel!==null},
+ {say:"赤く光っているのが攻撃できる相手。\n相手の前衛が空いているので<b>リーダーを直接殴れます</b>。",
+  hi:"#pedE", done:()=>S.e.hp<12},
+ {say:"よくできました。残りMPで<b>サラマンドラ</b>を前衛に出して、ターンを終えましょう。",
+  hi:"#handArea .card, #endBtn", done:()=>S.turn>=3},
+ {say:"相手が <b>⛨におうだち</b> を出しました。\n<b>これがいる間、ほかのユニットもリーダーも攻撃できません</b>。",
+  hi:'[data-cell="e-1"] .unit', next:true},
+ {say:"正面から殴ると自分も傷つきます。\n先に特技<b>いかずちの矢</b>（3ダメージ）で削りましょう。",
+  hi:"#handArea .card", done:()=>!handHas("いかずちの矢")},
+ {say:"MPが余ったら<b>テンション</b>に変えておきましょう。\n1ターン1回ためられて、<b>3たまると職業ごとの必殺技</b>が使えます。",
+  hi:"#tensionBtn", done:()=>S.p.tension>=1||S.turn>=4},
+ {say:"ここからは自由に戦ってみましょう。\n・壁を壊してからリーダーを殴る\n・MPは余らせず使い切る\nこの2つを意識すれば勝てます。",
+  hi:null, next:true, free:true}
+];
+
+function tutoEl(sel){ try{ return sel?document.querySelectorAll(sel):[]; }catch(e){ return []; } }
+function tutoPaint(){
+  if(!TUTO.on) return;
+  const b=document.getElementById("tutoBubble"), m=document.getElementById("tutoMask");
+  // 条件を満たしたステップを進める
+  let guard=0;
+  while(TUTO.step<TUTO_STEPS.length && TUTO_STEPS[TUTO.step].done && TUTO_STEPS[TUTO.step].done() && guard++<20) TUTO.step++;
+  const st=TUTO_STEPS[TUTO.step];
+  document.querySelectorAll(".tutoGlow").forEach(e=>e.classList.remove("tutoGlow"));
+  if(!st){ b.classList.remove("on"); m.classList.remove("on"); return; }
+  b.innerHTML=st.say+'<div class="row">'+
+    (st.next?'<button id="tutoNext">つぎへ ▶</button>':'')+
+    '<button class="skip" id="tutoSkip">説明をとばす</button></div>';
+  b.classList.add("on");
+  m.classList.toggle("on", !!st.hi);
+  tutoEl(st.hi).forEach(e=>e.classList.add("tutoGlow"));
+  const nx=document.getElementById("tutoNext");
+  if(nx) nx.onclick=()=>{ TUTO.step++; render(); };
+  document.getElementById("tutoSkip").onclick=()=>tutoEnd();
+}
+function tutoEnd(){
+  TUTO.on=false;
+  document.getElementById("tutoBubble").classList.remove("on");
+  document.getElementById("tutoMask").classList.remove("on");
+  document.querySelectorAll(".tutoGlow").forEach(e=>e.classList.remove("tutoGlow"));
+}
+// 相手の行動（固定台本）
+function tutoEnemyTurn(){
+  const gid=S.gid;
+  const seq=(TUTO_ENEMY[S.turn]||[]).slice();
+  (function next(){
+    if(!S||S.gid!==gid) return;
+    if(S.p.hp<=0||S.e.hp<=0){ render(); return; }
+    const a=seq.shift();
+    if(!a){
+      S.turn++; startTurn("p"); busy=false;
+      banner("あなたのターン"); render(); return;
+    }
+    if(a.sum){ const c=POOL.find(x=>x.n===a.sum); if(c) summon("e",c,a.slot); }
+    if(a.atk!==undefined && S.e.board[a.atk] && S.p.board[a.tgt]) attack("e",a.atk,a.tgt);
+    render(); setTimeout(next, 900);
+  })();
+}
+
 // ================= バランス測定用シミュレータ =================
 // 先攻=A(S.e側), 後攻=B(S.p側) として1試合を同期実行し、勝者と統計を返す
 function simGame(clsA, clsB, lvA, lvB){
@@ -3067,7 +3219,7 @@ window.simGame=simGame; window.simMatrix=simMatrix;
 loadSave();
 preloadArt();
 fitStage();
-showHome();
+if(!SAVE.tuto) showFirstBoot(); else showHome();
 // スクリーンショット用: ?shot=gacha / deck
 if(location.search.includes("shot=gacha")){ showGacha(openPack(10)); }
 if(location.search.includes("shot=deck")){ showDeckEdit("sword"); }
