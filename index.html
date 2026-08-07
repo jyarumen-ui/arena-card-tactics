@@ -456,6 +456,12 @@
     .menuCard:hover, .clsCard:hover { transform:none; }
     .card:active { transform:translateY(-8px) scale(1.04); }
   }
+  /* ドラッグ操作 */
+  #dragGhost { position:fixed; z-index:97; pointer-events:none; opacity:.9;
+    transform-origin:center; filter:drop-shadow(0 8px 16px rgba(0,0,0,.7)); }
+  #dragArrow { position:fixed; inset:0; z-index:96; pointer-events:none; display:none; }
+  #dragArrow.on { display:block; }
+  .dropOk { box-shadow:0 0 0 3px #8dff2e, 0 0 18px 6px rgba(141,255,46,.55) !important; }
   /* 大技のカットイン */
   #cutin { position:fixed; inset:0; z-index:70; display:none; pointer-events:none;
     align-items:center; justify-content:center; }
@@ -634,6 +640,10 @@
 <div id="coach"></div>
 <div id="tutoMask"></div>
 <div id="tutoBubble"></div>
+<svg id="dragArrow"><defs><marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+  <path d="M0 0 L10 5 L0 10 z" fill="#ffe9a0"/></marker></defs>
+  <path id="dragPath" fill="none" stroke="#ffe9a0" stroke-width="5" stroke-linecap="round"
+    marker-end="url(#ah)" opacity=".92"/></svg>
 <div id="cutin"><div class="band"></div><div class="inner"><div class="pic"></div><div class="txt"></div></div></div>
 <div id="flash"></div>
 <button id="cancelBtn">✕ やめる</button>
@@ -1613,6 +1623,7 @@ function startGame(clsP, clsE, opt){
 }
 function rematch(){
   if(MODE==="tuto"){ startGame("sword","mage",{tuto:true}); return; }
+  if(MODE==="arena"){ showArena(); return; }
   if(!LAST) return showHome();
   MODE=LAST.mode; AI_LEVEL=LAST.lv;
   startGame(LAST.clsP, LAST.clsE);
@@ -1882,6 +1893,34 @@ function checkWin(){
         else rew="おつかれさまでした";
       } else { txt="ここまで！"; rew="もう一度ためせます"; sfx("lose"); }
       saveNow();
+    } else if(MODE==="arena"){
+      const a=arenaState();
+      if(pWin){
+        a.stage++; if(a.stage>a.best) a.best=a.stage;
+        SAVE.wins++; const d=dailyState(); d.wins++;
+        if(!d.clsWon.includes(S.p.cls)) d.clsWon.push(S.p.cls);
+        if(a.stage>=ARENA.length){
+          txt="👑 アリーナ制覇！";
+          SAVE.gold+=1500;
+          const got=openPack(5).concat([{c:POOL.filter(x=>x.r==="L")[Math.floor(Math.random()*POOL.filter(x=>x.r==="L").length)], isNew:false, dust:0}]);
+          const L=got[got.length-1].c;
+          if(owned(L.n)<maxCopies(L)) SAVE.col[L.n]=owned(L.n)+1; else SAVE.stones+=DUST.L;
+          rew=`8人抜き達成！ ゴールド +1500　／　レジェンド「${L.n}」を獲得`;
+          a.stage=0; a.cls=null;
+        } else {
+          txt=`🏆 ${a.stage}人目を撃破！`;
+          SAVE.gold+=150;
+          rew=`ゴールド +150　／　つぎの相手は ${CLASSES[ARENA[a.stage].cls].n}`;
+        }
+        sfx("win");
+      } else {
+        txt="💀 ここで敗退…";
+        SAVE.losses++; SAVE.gold+=50;
+        rew=`${a.stage}人抜きで終了　／　ゴールド +50　（最高記録 ${a.best}人）`;
+        a.stage=0; a.cls=null;
+        sfx("lose");
+      }
+      saveNow(); checkDaily();
     } else if(MODE==="pvp"){
       const w = pWin ? S.pnum : (S.pnum===1?2:1);
       txt=`🏆 プレイヤー${w} のかち！`;
@@ -2252,6 +2291,9 @@ document.getElementById("tensionBtn").onclick=()=>{
 };
 function cancelAll(){ if(!S||busy) return; S.pending=null; S.sel=null; S.selLeader=false; showDetail(null); render(); }
 document.addEventListener("contextmenu",e=>{ e.preventDefault(); cancelAll(); });
+// 指やマウスが対象の外で離れたときも必ず後始末する
+document.addEventListener("pointerup", e=>{ if(DRAG) dragEnd(e.clientX,e.clientY); });
+document.addEventListener("pointermove", e=>{ if(DRAG) dragMove(e.clientX,e.clientY); });
 document.addEventListener("keydown",e=>{ if(e.key==="Escape") cancelAll(); });
 document.getElementById("cancelBtn").onclick=cancelAll;
 // まほうのせいすい（後攻の補償）を人間プレイヤーも使えるように
@@ -2583,6 +2625,107 @@ function showDetail(c){
     <div class="dtxt">${body}</div>`;
   d.classList.add("on");
 }
+// ============ ドラッグ操作（本家に近い手触り。クリック操作も従来どおり使える） ============
+let DRAG=null;
+function dragGhostEl(){
+  let g=document.getElementById("dragGhost");
+  if(!g){ g=document.createElement("div"); g.id="dragGhost"; document.body.appendChild(g); }
+  return g;
+}
+function dragClear(){
+  const g=document.getElementById("dragGhost"); if(g) g.remove();
+  document.getElementById("dragArrow").classList.remove("on");
+  document.querySelectorAll(".dropOk").forEach(e=>e.classList.remove("dropOk"));
+  DRAG=null;
+}
+// ドロップ先の判定（指やマウスの真下にある要素から探す）
+function dropTargetAt(x,y){
+  const el=document.elementFromPoint(x,y); if(!el) return null;
+  const ped=el.closest("#pedE"); if(ped) return {kind:"leader"};
+  const cell=el.closest("[data-cell]");
+  if(cell){ const [side,i]=cell.dataset.cell.split("-"); return {kind:"cell", side, i:+i}; }
+  return null;
+}
+function markDrops(){
+  document.querySelectorAll(".dropOk").forEach(e=>e.classList.remove("dropOk"));
+  if(!DRAG) return;
+  if(DRAG.kind==="hand"){
+    const c=S.p.hand[DRAG.idx]; if(!c) return;
+    if(c.t==="unit") document.querySelectorAll("#gridPF .slot,#gridPB .slot").forEach((s,k)=>{
+      const i=k<3?k:k;   // gridPF=0..2 / gridPB=3..5 の順
+      const idx=s.dataset.cell?+s.dataset.cell.split("-")[1]:-1;
+      if(idx>=0&&!S.p.board[idx]) s.classList.add("dropOk");
+    });
+  } else if(DRAG.kind==="unit"){
+    document.querySelectorAll(".unit.targetable").forEach(e=>e.classList.add("dropOk"));
+    const pe=document.getElementById("pedE");
+    if(pe.classList.contains("targetable")) pe.classList.add("dropOk");
+  }
+}
+function dragMove(x,y){
+  if(!DRAG) return;
+  if(!DRAG.moved){
+    if(Math.hypot(x-DRAG.x0,y-DRAG.y0)<9) return;
+    DRAG.moved=true;
+    if(DRAG.kind==="hand"){
+      const c=S.p.hand[DRAG.idx]; if(!c){ dragClear(); return; }
+      showDetail(c);
+      if(c.c<=S.p.mp){
+        if(c.t==="unit"&&S.p.board.some(s=>s===null)) S.pending={type:"place", idx:DRAG.idx};
+        else if(c.t==="spell"&&TARGET_SPELLS.includes(c.spell)) S.pending={type:"spell", idx:DRAG.idx};
+      }
+      const g=dragGhostEl();
+      g.innerHTML=""; g.appendChild(makeCardEl(c));
+      g.style.width="90px"; g.style.transform=`scale(${STAGE_SCALE})`;
+    } else {
+      S.sel=DRAG.slot;
+      document.getElementById("dragArrow").classList.add("on");
+    }
+    render(); markDrops();
+  }
+  if(DRAG.kind==="hand"){
+    const g=document.getElementById("dragGhost");
+    if(g){ g.style.left=(x-45*STAGE_SCALE)+"px"; g.style.top=(y-59*STAGE_SCALE)+"px"; }
+  } else {
+    const from=document.querySelector(`[data-cell="p-${DRAG.slot}"]`);
+    if(from){ const r=from.getBoundingClientRect();
+      const sx=r.x+r.width/2, sy=r.y+r.height/2;
+      const cx=(sx+x)/2, cy=Math.min(sy,y)-60;
+      document.getElementById("dragPath").setAttribute("d",`M${sx},${sy} Q${cx},${cy} ${x},${y}`);
+    }
+  }
+}
+function dragEnd(x,y){
+  if(!DRAG) return;
+  const d=DRAG;
+  if(!d.moved){ dragClear(); return; }        // 動かしていなければ通常のクリック扱い
+  const t=dropTargetAt(x,y);
+  dragClear();
+  if(!t) { cancelAll(); return; }
+  if(d.kind==="hand"){
+    const c=S.p.hand[d.idx]; if(!c||c.c>S.p.mp){ cancelAll(); return; }
+    if(c.t==="unit"&&t.kind==="cell"&&t.side==="p"&&!S.p.board[t.i]){ S.pending=null; playCard(d.idx,t.i); return; }
+    if(c.t==="spell"&&TARGET_SPELLS.includes(c.spell)){
+      if(t.kind==="leader"&&c.spell!=="dmgrow3"){ S.pending=null; playCard(d.idx,"leader"); return; }
+      if(t.kind==="cell"&&t.side==="e"&&S.e.board[t.i]&&!S.e.board[t.i].stealth){ S.pending=null; playCard(d.idx,t.i); return; }
+    }
+    cancelAll(); return;
+  }
+  // ユニットのドラッグ＝攻撃
+  if(t.kind==="leader") onEnemyTarget("leader");
+  else if(t.kind==="cell"&&t.side==="e") onEnemyTarget(t.i);
+  else cancelAll();
+}
+function attachDrag(el, spec){
+  el.addEventListener("pointerdown", ev=>{
+    if(busy||!S||ev.button===2) return;
+    DRAG={...spec, x0:ev.clientX, y0:ev.clientY, moved:false};
+    el.setPointerCapture&&el.setPointerCapture(ev.pointerId);
+  });
+  el.addEventListener("pointermove", ev=>{ if(DRAG) dragMove(ev.clientX,ev.clientY); });
+  el.addEventListener("pointerup",   ev=>{ if(DRAG) dragEnd(ev.clientX,ev.clientY); });
+  el.addEventListener("pointercancel",()=>dragClear());
+}
 // ============ カットイン演出 ============
 let cutQueue=[], cutBusy=false;
 function cutin(name, sub, rar){
@@ -2682,7 +2825,12 @@ function render(){
     idxs.forEach(i=>{
       const slot=document.createElement("div"); slot.className="slot"; slot.dataset.cell="p-"+i;
       const u=S.p.board[i];
-      if(u){ const d=unitDiv(u,true,i); d.onclick=()=>onMySlotClick(i); slot.appendChild(d); }
+      if(u){
+        const d=unitDiv(u,true,i);
+        d.onclick=()=>{ if(!DRAG||!DRAG.moved) onMySlotClick(i); };
+        if(u.ready&&!busy) attachDrag(d, {kind:"unit", slot:i});
+        slot.appendChild(d);
+      }
       else if(placing&&!busy){ slot.classList.add("placeable"); slot.onclick=()=>onMySlotClick(i); }
       g.appendChild(slot);
     });
@@ -2732,8 +2880,9 @@ function render(){
     const d=makeCardEl(c);
     if(c.c<=S.p.mp&&!busy) d.classList.add("playable");
     if(S.pending&&S.pending.idx===i&&["place","spell","use"].includes(S.pending.type)) d.classList.add("selected");
-    d.onclick=()=>onHandClick(i);
-    d.onmouseenter=()=>{ if(!S.pending) showDetail(c); };   // マウスなら重ねるだけで内容が読める
+    d.onclick=()=>{ if(!DRAG||!DRAG.moved) onHandClick(i); };   // ドラッグしたときはクリック扱いにしない
+    d.onmouseenter=()=>{ if(!S.pending) showDetail(c); };       // マウスなら重ねるだけで内容が読める
+    attachDrag(d, {kind:"hand", idx:i});
     ha.appendChild(d);
   });
   document.getElementById("hpP").textContent=S.p.hp;
@@ -2862,6 +3011,7 @@ function showHome(){
   openScreen(`<div class="scHead"><h2>アリーナ・カードタクティクス</h2>${purse()}</div>
     <div class="menuGrid">
       <div class="menuCard" data-go="battle"><div class="ic">⚔️</div><h3>バトル</h3><p>AI対戦（3段階の強さ）／2人対戦</p></div>
+      <div class="menuCard" data-go="arena"><div class="ic">👑</div><h3>アリーナ制覇</h3><p>8人のリーダーを連続で撃破する挑戦${arenaState().stage>0?`<br><b style="color:#ffe9a0">挑戦中 ${arenaState().stage}/8</b>`:""}</p></div>
       <div class="menuCard" data-go="deck"><div class="ic">📕</div><h3>デッキ編成</h3><p>職業ごとに30枚のデッキを組む</p></div>
       <div class="menuCard" data-go="gacha"><div class="ic">🎁</div><h3>カードパック</h3><p>1パック${PACK_COST}G／10連${PACK10}G</p></div>
       <div class="menuCard" data-go="alch"><div class="ic">⚗️</div><h3>錬金</h3><p>余ったカードを分解して欲しいカードを生成</p></div>
@@ -2881,7 +3031,8 @@ function showHome(){
     </div>`);
   scr().querySelectorAll("[data-go]").forEach(el=>el.onclick=()=>{
     const g=el.dataset.go;
-    if(g==="battle") showModeSelect(); else if(g==="deck") showDeckPick();
+    if(g==="battle") showModeSelect(); else if(g==="arena") showArena();
+    else if(g==="deck") showDeckPick();
     else if(g==="gacha") showGacha(); else showAlchemy();
   });
   scr().querySelector("#howto").onclick=showHowTo;
@@ -2966,6 +3117,74 @@ function showSaveIO(){
       saveNow(); log2("読み込みました"); showHome();
     }catch(e){ log2("読み込めませんでした: "+e.message); }
   };
+}
+// ================= アリーナ制覇（8人抜き） =================
+const ARENA=[
+  {cls:"sword",   lv:0, say:"ようこそ闘技場へ。まずは私が相手をしよう。"},
+  {cls:"thief",   lv:0, say:"影から来る一撃、避けられるかな？"},
+  {cls:"monk",    lv:1, say:"数で押し切らせてもらう！"},
+  {cls:"priest",  lv:1, say:"あなたに癒しを。……倒れるまでね。"},
+  {cls:"merchant",lv:1, say:"商売は数だ。手札は切らさんよ。"},
+  {cls:"oracle",  lv:2, say:"あなたの敗北が視えています。"},
+  {cls:"mage",    lv:2, say:"盤面ごと焼き払ってあげる。"},
+  {cls:"dark",    lv:2, say:"我が身を削ってでも、貴様を沈める。"},
+];
+function arenaState(){
+  if(!SAVE.arena) SAVE.arena={stage:0, cls:null, best:0};
+  return SAVE.arena;
+}
+function showArena(){
+  const a=arenaState();
+  const rows=ARENA.map((e,i)=>{
+    const done=i<a.stage, now=i===a.stage;
+    return `<div class="prow" style="font-size:12px;color:${done?'#8dff2e':(now?'#ffe9a0':'#7b8798')}">
+      <span style="width:18px">${done?"✔":(now?"▶":"・")}</span>
+      <span style="width:26px">${done||now?(art("LEADER_"+e.cls,22)||""):""}</span>
+      <span class="nm" style="flex:1">${i+1}人目　${CLASSES[e.cls].n}</span>
+      <span>${["弱い","ふつう","強い"][e.lv]}</span></div>`;
+  }).join("");
+  openScreen(`<div class="scHead"><button class="btn sub" id="bk">← もどる</button><h2>アリーナ制覇</h2>${purse()}</div>
+    <p class="hint2">8人のリーダーを順に倒していく連戦モード。負けると最初からです。<br>
+      1人倒すごとに +150G、全員倒すと +1500G と レジェンド確定パック。</p>
+    <div style="display:flex;gap:16px;justify-content:center;align-items:flex-start;flex-wrap:wrap">
+      <div class="statPanel" style="width:320px"><div class="leaderName">挑戦の進み</div>${rows}</div>
+      <div class="statPanel" style="width:280px">
+        <div class="leaderName">${a.stage>0?"挑戦中":"リーダーを選ぶ"}</div>
+        <div id="arenaPick" class="clsRow" style="flex-wrap:wrap;gap:6px;justify-content:center"></div>
+        <p class="hint2" id="arenaMsg" style="margin-top:8px"></p>
+        <button class="btn" id="arenaGo" style="margin-top:6px">挑戦する</button>
+        ${a.stage>0?'<button class="btn sub" id="arenaReset" style="margin-top:6px">最初からやり直す</button>':""}
+      </div>
+    </div>
+    <p class="hint2" style="margin-top:10px">最高記録：${a.best} 人抜き</p>`);
+  scr().querySelector("#bk").onclick=showHome;
+  const pick=scr().querySelector("#arenaPick"), msg=scr().querySelector("#arenaMsg");
+  let sel=a.cls||"sword";
+  const paint=()=>{
+    pick.innerHTML="";
+    Object.entries(CLASSES).forEach(([k,c])=>{
+      const d=document.createElement("div");
+      d.style.cssText="width:62px;padding:4px;border-radius:9px;cursor:pointer;text-align:center;"+
+        "border:2px solid "+(k===sel?"#ffe9a0":"#3a4a66")+";background:"+(k===sel?"rgba(217,178,74,.18)":"rgba(10,14,26,.6)");
+      d.innerHTML=`<div style="height:40px;display:flex;align-items:center;justify-content:center">${art("LEADER_"+k,40)||""}</div>
+        <div style="font-size:9px;color:#dbe4f2">${c.n}</div>`;
+      d.onclick=()=>{ if(a.stage===0){ sel=k; paint(); } };
+      pick.appendChild(d);
+    });
+    const e=ARENA[a.stage];
+    msg.innerHTML = e ? `つぎの相手：<b style="color:#ffe9a0">${CLASSES[e.cls].n}</b>（${["弱い","ふつう","強い"][e.lv]}）<br>「${e.say}」`
+                      : "全員倒しました！";
+    if(a.stage>0) pick.style.opacity=".55";
+  };
+  paint();
+  scr().querySelector("#arenaGo").onclick=()=>{
+    const e=ARENA[a.stage]; if(!e) { showHome(); return; }
+    a.cls=a.stage===0?sel:a.cls; saveNow();
+    MODE="arena"; AI_LEVEL=e.lv;
+    startGame(a.cls, e.cls);
+  };
+  const rs=scr().querySelector("#arenaReset");
+  if(rs) rs.onclick=()=>{ a.stage=0; a.cls=null; saveNow(); showArena(); };
 }
 // ================= モード選択 =================
 function showModeSelect(){
@@ -3325,6 +3544,7 @@ fitStage();
 if(!SAVE.tuto) showFirstBoot(); else showHome();
 // スクリーンショット用: ?shot=gacha / deck
 if(location.search.includes("shot=gacha")){ showGacha(openPack(10)); }
+if(location.search.includes("shot=arena")){ SAVE.tuto=1; showArena(); }
 if(location.search.includes("shot=cutin")){ SAVE.tuto=1; MODE="ai"; startGame("sword","mage"); document.getElementById("mullBtn").click(); summon("p",POOL.find(c=>c.n==="竜王ヴァルガ"),0); render(); }
 if(location.search.includes("shot=deck")){ showDeckEdit("sword"); }
 
