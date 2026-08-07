@@ -3051,9 +3051,17 @@ function showFirstBoot(){
       <div style="display:flex;justify-content:center;gap:10px;margin-bottom:14px">
         ${["LEADER_sword","LEADER_mage","LEADER_priest"].map(k=>`<div style="width:96px">${art(k,96)||""}</div>`).join("")}
       </div>
-      <p style="font-size:16px;color:#fff;margin-bottom:16px"><b>遊びながら覚えられます。3分で1勝できます。</b></p>
-      <button class="btn" id="fbStart" style="font-size:17px;padding:12px 34px">▶ はじめる</button>
-      <div style="margin-top:12px"><button class="btn sub" id="fbSkip" style="font-size:12px">説明はいらない（ホームへ）</button></div>
+      <p style="font-size:15px;color:#dbe4f2;margin-bottom:16px">遊び方はどちらでも選べます。</p>
+      <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
+        <div class="menuCard" id="fbStart" style="width:250px;padding:16px 14px">
+          <div class="ic">🎓</div><h3>チュートリアルから</h3>
+          <p>3分の練習試合で、置く場所・攻撃・特性を<br>手を動かしながら覚えられます<br><b style="color:#ffe9a0">クリアで 300G</b></p>
+        </div>
+        <div class="menuCard" id="fbSkip" style="width:250px;padding:16px 14px">
+          <div class="ic">⚔️</div><h3>チュートリアルなし</h3>
+          <p>すぐにホーム画面へ。<br>ルールは「📖 あそびかた」でいつでも読めます<br><b style="color:#9db0c8">あとから受けることもできます</b></p>
+        </div>
+      </div>
     </div>`);
   scr().querySelector("#fbStart").onclick=()=>{ MODE="tuto"; AI_LEVEL=1; startGame("sword","mage",{tuto:true}); };
   scr().querySelector("#fbSkip").onclick=()=>{ SAVE.tuto=1; saveNow(); showHome(); };
@@ -3441,13 +3449,21 @@ function tutoPaint(){
   if(!st){ b.classList.remove("on"); m.classList.remove("on"); return; }
   b.innerHTML=st.say+'<div class="row">'+
     (st.next?'<button id="tutoNext">つぎへ ▶</button>':'')+
-    '<button class="skip" id="tutoSkip">説明をとばす</button></div>';
+    '<button class="skip" id="tutoSkip">説明をとばす</button>'+
+    '<button class="skip" id="tutoQuit">やめてホームへ</button></div>';
   b.classList.add("on");
   m.classList.toggle("on", !!st.hi);
   tutoEl(st.hi).forEach(e=>e.classList.add("tutoGlow"));
   const nx=document.getElementById("tutoNext");
   if(nx) nx.onclick=()=>{ TUTO.step++; render(); };
-  document.getElementById("tutoSkip").onclick=()=>tutoEnd();
+  document.getElementById("tutoSkip").onclick=()=>{
+    tutoEnd();
+    coach("説明を止めました。このまま自由に戦えます。\n左上の 🏳️ でいつでもホームにもどれます。");
+  };
+  document.getElementById("tutoQuit").onclick=()=>{
+    tutoEnd(); SAVE.tuto=1; saveNow();
+    S=null; busy=true; showHome();
+  };
 }
 function tutoEnd(){
   TUTO.on=false;
