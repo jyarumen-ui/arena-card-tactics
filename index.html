@@ -157,7 +157,8 @@
     border:2px solid #221e15;
     box-shadow: inset 0 3px 4px rgba(255,246,220,.18), inset 0 -7px 12px rgba(0,0,0,.62),
       0 7px 14px rgba(0,0,0,.62), 0 2px 3px rgba(0,0,0,.5); }
-  .slot.placeable { cursor:pointer; animation:pulse 1s infinite; border-color:#7CFC00; }
+  .slot.placeable { cursor:pointer; animation:pulse 1s infinite; animation-delay:calc(var(--pi,0)*0ms);
+    border-color:#7CFC00; }
   @keyframes pulse { 0%,100%{box-shadow:0 0 4px #7CFC0055, inset 0 -4px 8px rgba(0,0,0,.55);}
     50%{box-shadow:0 0 14px #7CFC00bb, inset 0 -4px 8px rgba(0,0,0,.55);} }
   #centerLine { width:420px; height:5px; border-radius:3px; margin:4px 0;
@@ -170,7 +171,9 @@
       linear-gradient(#7d8ba6 0%,#4a5773 42%,#232c40 100%);
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     border:2px solid #b3c1d8;
-    box-shadow:0 4px 7px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.35); animation:spawn .25s; }
+    box-shadow:0 4px 7px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.35); }
+  /* 召喚アニメは「場に出た瞬間の1回だけ」。毎フレーム走ると盤面がガタつくため */
+  .unit.spawned { animation:spawn .25s; }
   .unit::before { content:""; position:absolute; top:6px; left:50%; transform:translateX(-50%);
     width:72px; height:54px; border-radius:50%;
     background:radial-gradient(circle at 50% 40%, rgba(255,252,235,.42), rgba(255,240,200,0) 70%); }
@@ -188,7 +191,7 @@
   .unit.selected { border-color:#fff700; box-shadow:0 0 14px #fff700; }
   .unit.targetable { border-color:#ff4433; box-shadow:0 0 14px #ff4433; }
   .unit.protected { opacity:1; filter:grayscale(.85) brightness(.55); }
-  .unit.protected::after { content:"ガード中"; position:absolute; bottom:1px; left:50%;
+  .unit.protected::after { content:attr(data-why); position:absolute; bottom:1px; left:50%;
     transform:translateX(-50%); font-size:8px; color:#aab8cc; background:rgba(0,0,0,.75);
     padding:0 5px; border-radius:4px; white-space:nowrap; }
   .unit.stealth { opacity:.55; filter:saturate(.35); }
@@ -300,7 +303,7 @@
     background:linear-gradient(90deg, transparent, rgba(0,0,0,.6) 22% 78%, transparent);
     border-top:1px solid #d9b24a55; border-bottom:1px solid #d9b24a55;
     pointer-events:none; opacity:0; z-index:50; }
-  #log { position:fixed; right:12px; bottom:150px; width:215px; max-height:160px; overflow:hidden;
+  #log { position:fixed; right:12px; bottom:152px; width:200px; max-height:120px; overflow:hidden;
     font-size:11px; color:#fff3d0; text-shadow:0 1px 2px #000; pointer-events:none; z-index:40; }
   #log div { margin-top:2px; margin-left:auto; background:rgba(0,0,0,.35); border-radius:6px; padding:1px 7px;
     width:fit-content; max-width:100%; animation:logfade 7s forwards; }
@@ -327,7 +330,8 @@
   #mullRow .card.mull::after { content:"交換"; position:absolute; top:-22px; left:50%; transform:translateX(-50%);
     font-size:11px; color:#ff9c8a; font-weight:bold; }
   /* カード詳細パネル */
-  #detail { position:fixed; left:12px; bottom:150px; width:216px; z-index:56; display:none;
+  /* 自分のMP/テンションを隠さないよう、詳細は画面の右側に出す */
+  #detail { position:fixed; right:12px; top:96px; width:216px; z-index:56; display:none;
     background:linear-gradient(rgba(18,24,38,.97), rgba(8,11,20,.98));
     border:2px solid #6b5410; outline:1px solid rgba(217,178,74,.55); outline-offset:1px;
     border-radius:12px; padding:10px 11px 11px;
@@ -433,7 +437,7 @@
     #mullRow .card .face img, .colGrid .card .face img, .revealRow .card .face img { width:30px; height:30px; }
     .card .cname { font-size:8.5px; } .card .ctype { font-size:7.5px; }
     .deckList { width:180px; }
-    #detail { width:150px; bottom:118px; padding:6px; }
+    #detail { width:150px; top:74px; padding:6px; }
     #detail .dart { height:60px; } #detail .dart img { width:58px; height:58px; }
     #detail h4 { font-size:11px; } #detail .dmeta,#detail .dkw,#detail .dtxt { font-size:9px; }
     #rotateHint h2 { font-size:16px; } #rotateHint p { font-size:11px; }
@@ -452,6 +456,23 @@
     .menuCard:hover, .clsCard:hover { transform:none; }
     .card:active { transform:translateY(-8px) scale(1.04); }
   }
+  /* 初心者向け: 中央に大きく出る案内トースト */
+  #coach { position:fixed; left:50%; bottom:150px; transform:translateX(-50%); z-index:62; display:none;
+    max-width:min(560px, 88vw); padding:11px 18px; border-radius:14px; font-size:14px; line-height:1.7;
+    background:linear-gradient(rgba(18,24,38,.98),rgba(8,11,20,.99));
+    border:2px solid #6b5410; outline:1px solid #d9b24a;
+    box-shadow:0 10px 26px rgba(0,0,0,.8); white-space:pre-line; text-align:left; }
+  #coach.on { display:block; animation:coachIn .22s; }
+  #coach b { color:#ffe9a0; }
+  @keyframes coachIn { from{opacity:0; transform:translateX(-50%) translateY(8px);} to{opacity:1;} }
+  /* 攻撃対象を選んでいる間の状況バー */
+  #atkBar { position:fixed; top:76px; left:50%; transform:translateX(-50%); z-index:60; display:none;
+    font-size:13px; padding:5px 18px; border-radius:14px; background:rgba(0,0,0,.8);
+    border:1px solid #d9b24a; color:#ffe9a0; white-space:nowrap; max-width:92vw; overflow:hidden;
+    text-overflow:ellipsis; }
+  /* 前衛が真下の後衛を守っていることを線で示す */
+  .slot.guarding::after { content:""; position:absolute; left:50%; bottom:-11px; width:2px; height:11px;
+    background:linear-gradient(#8dff2e,rgba(141,255,46,0)); transform:translateX(-50%); }
   .cancelHint { position:fixed; top:70px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,.7);
     border:1px solid #d9b24a; padding:4px 16px; border-radius:14px; font-size:13px; z-index:60; display:none; }
   .deco { display:none; }
@@ -567,6 +588,8 @@
 <div id="detail"></div>
 <div id="log"></div>
 <div class="cancelHint" id="cancelHint">対象を選択（右クリックでキャンセル）</div>
+<div id="atkBar"></div>
+<div id="coach"></div>
 <button id="cancelBtn">✕ やめる</button>
 <button id="discardBtn">🗑 このカードを捨てる</button>
 <button id="potionBtn">🧪 まほうのせいすい（MP+1）</button>
@@ -612,7 +635,7 @@ const CLASSES = {
   dark:   {n:"ダークナイト",   e:"🗡️", skill:"いのちけずり（自分に2・敵1体に5）", desc:"自らを削り火力を生む魔剣士", tgt:true},
   thief:  {n:"シーフ",         e:"🥷", skill:"かげぶんしん（2/2速攻ステルスを召喚）", desc:"隠れて刺す盗賊", tgt:false},
   mage:   {n:"メイガス",       e:"🧙", skill:"マジックバースト（敵1体に3ダメージ）", desc:"盤面を焼き払う魔導士", tgt:true},
-  priest: {n:"プリースト",     e:"👼", skill:"いやしのひかり（HP5回復＋1ドロー）",  desc:"回復と手数で粘る僧侶", tgt:false},
+  priest: {n:"プリースト",     e:"👼", skill:"いやしのひかり（HP5回復＋1ドロー＋味方回復。HP13以下なら8回復）",  desc:"回復と手数で粘る僧侶", tgt:false},
 };
 // ============ カードプール（オリジナル / r:"L"=レジェンドはデッキ1枚） ============
 const POOL = [
@@ -748,6 +771,94 @@ const POOL = [
  {n:"一閃",          t:"spell", c:4, spell:"destroy", r:"R"},
  {n:"沈黙の霧",      t:"spell", c:2, spell:"silence", r:"N"},
  {n:"終焉のラグナロク",t:"spell",c:8, spell:"wipe",   r:"L"},
+ // ================= 拡張セット「種族の目覚め」 =================
+ {n:"こだまスライム",  t:"unit", c:1, a:0, h:2, kw:"crydraw",  r:"R", gen:{b:"slime",g:"gBlue",l:"#10508c",mouth:1}},
+ {n:"マナのつぼみ",    t:"unit", c:1, a:0, h:2, kw:"crymp",    r:"R", gen:{b:"plant",g:"gGreen",l:"#14611f",one:1}},
+ {n:"ミニドラゴン",    t:"unit", c:1, a:1, h:1, kw:"racesolo", race:"ドラゴン", r:"R", gen:{b:"dragon",g:"gRed",l:"#70140a"}},
+ {n:"わかばウルフ",    t:"unit", c:1, a:1, h:1, kw:"racesolo", race:"けもの",   r:"N", gen:{b:"beast",g:"gOlive",l:"#2b3b0d",fang:1}},
+ {n:"かけらゴーレム",  t:"unit", c:1, a:0, h:2, kw:"nio",      r:"N", gen:{b:"golem",g:"gStone",l:"#3b4049"}},
+ {n:"したっぱゾンビ",  t:"unit", c:1, a:1, h:1, kw:"lastdraw", r:"N", gen:{b:"undead",g:"gBone",l:"#8d8672"}},
+ {n:"ちいさな火の玉",  t:"unit", c:1, a:1, h:1, kw:"cryburn",  r:"R", gen:{b:"elem",g:"gFlame",l:"#8f2403",one:1}},
+ {n:"すばやいツバメ",  t:"unit", c:1, a:1, h:1, kw:"onatk",    r:"N", gen:{b:"bird",g:"gCream",l:"#6b5c3d"}},
+ {n:"せいれいのたまご",t:"unit", c:1, a:0, h:2, kw:"growth",   r:"R", gen:{b:"elem",g:"gCream",l:"#6b5c3d",one:1}},
+ {n:"こわれかけロボ",  t:"unit", c:1, a:1, h:1, kw:"metal",    r:"SR",gen:{b:"golem",g:"gSteel",l:"#12305a"}},
+ {n:"マナクリスタル",  t:"unit", c:2, a:1, h:2, kw:"crymp",    r:"R", gen:{b:"elem",g:"gCobalt",l:"#132356",one:1}},
+ {n:"ぬすっとカラス",  t:"unit", c:2, a:2, h:2, kw:"crydraw",  r:"R", gen:{b:"bird",g:"gDark",l:"#07080d"}},
+ {n:"とげネズミ",      t:"unit", c:2, a:1, h:3, kw:"enrage",   r:"N", gen:{b:"beast",g:"gBrown",l:"#4a3014",fang:1}},
+ {n:"火花の精",        t:"unit", c:2, a:2, h:2, kw:"cryburn",  r:"R", gen:{b:"elem",g:"gFlame",l:"#8f2403",one:1}},
+ {n:"群狼のアルファ",  t:"unit", c:3, a:3, h:3, kw:"racebuff", race:"けもの",     r:"SR",gen:{b:"beast",g:"gBrown",l:"#4a3014",fang:1}},
+ {n:"大空の先導者",    t:"unit", c:3, a:3, h:3, kw:"racebuff", race:"とり",       r:"SR",gen:{b:"bird",g:"gYellow",l:"#95700a",wing:1}},
+ {n:"世界樹のなえ",    t:"unit", c:3, a:2, h:4, kw:"racebuff", race:"しょくぶつ", r:"SR",gen:{b:"plant",g:"gGreen",l:"#14611f",one:1}},
+ {n:"精霊の導き手",    t:"unit", c:3, a:3, h:3, kw:"racebuff", race:"エレメント", r:"SR",gen:{b:"elem",g:"gPurple",l:"#3d1c78",one:1}},
+ {n:"沈黙の司祭",      t:"unit", c:3, a:2, h:3, kw:"crysilence", r:"R", gen:{b:"humanoid",g:"gBone",l:"#8d8672"}},
+ {n:"マナの番人",      t:"unit", c:3, a:2, h:3, kw:"crymp",      r:"R", gen:{b:"golem",g:"gCobalt",l:"#132356"}},
+ {n:"スライムキング",  t:"unit", c:4, a:3, h:5, kw:"racebuff", race:"スライム",   r:"SR",gen:{b:"slime",g:"gBlue",l:"#10508c",crown:1,mouth:1}},
+ {n:"傭兵団の隊長",    t:"unit", c:4, a:4, h:4, kw:"racebuff", race:"にんげん",   r:"SR",gen:{b:"humanoid",g:"gSteel",l:"#12305a"}},
+ {n:"女王アリ",        t:"unit", c:4, a:3, h:5, kw:"racebuff", race:"むし",       r:"SR",gen:{b:"insect",g:"gOlive",l:"#2b3b0d",crown:1}},
+ {n:"墓守の司教",      t:"unit", c:4, a:3, h:5, kw:"racebuff", race:"アンデッド", r:"SR",gen:{b:"undead",g:"gMaroon",l:"#200d12"}},
+ {n:"深海の歌姫",      t:"unit", c:4, a:3, h:5, kw:"racebuff", race:"すいせい",   r:"SR",gen:{b:"fish",g:"gCobalt",l:"#132356",mouth:1}},
+ {n:"魔導の技師",      t:"unit", c:4, a:3, h:5, kw:"racebuff", race:"ぶっしつ",   r:"SR",gen:{b:"humanoid",g:"gStone",l:"#3b4049"}},
+ {n:"鋼のかかし",      t:"unit", c:4, a:0, h:8, kw:"nio",      r:"R", gen:{b:"golem",g:"gBrown",l:"#4a3014"}},
+ {n:"竜騎士ガイア",    t:"unit", c:5, a:4, h:5, kw:"racebuff", race:"ドラゴン",   r:"SR",gen:{b:"humanoid",g:"gRed",l:"#70140a",horn:1}},
+ {n:"氷結のゴーレム",  t:"unit", c:5, a:4, h:5, kw:"shield",   r:"R", gen:{b:"golem",g:"gSteel",l:"#12305a"}},
+ {n:"復讐の亡霊",      t:"unit", c:5, a:6, h:3, kw:"enrage",   r:"R", gen:{b:"undead",g:"gMaroon",l:"#200d12"}},
+ {n:"永久機関ゴーレム",t:"unit", c:6, a:4, h:7, kw:"crymp",      r:"SR",gen:{b:"golem",g:"gGold",l:"#7a5010"}},
+ {n:"大鎌の死神",      t:"unit", c:6, a:6, h:4, kw:"crysilence", r:"SR",gen:{b:"undead",g:"gDark",l:"#07080d"}},
+ {n:"竜王の末裔",      t:"unit", c:6, a:5, h:6, kw:"racebuff", race:"ドラゴン", r:"SR",gen:{b:"dragon",g:"gGold",l:"#7a5010",horn:1}},
+ {n:"深淵のクラーケン",t:"unit", c:7, a:5, h:9, kw:"nio",        r:"SR",gen:{b:"fish",g:"gCobalt",l:"#132356",one:1}},
+ {n:"業火竜イグニス",  t:"unit", c:7, a:7, h:5, kw:"two",        r:"SR",gen:{b:"dragon",g:"gFlame",l:"#8f2403",horn:1,fang:1}},
+ {n:"星喰らいの巨鳥",  t:"unit", c:8, a:6, h:9, kw:"growth",     r:"SR",gen:{b:"bird",g:"gCloud",l:"#1e2431",wing:1}},
+ {n:"冥王ベルゼグ",    t:"unit", c:9, a:8, h:8, kw:"crydestroy", r:"L", gen:{b:"undead",g:"gDark",l:"#07080d",crown:1}},
+ {n:"創世の巨神",      t:"unit", c:10,a:9, h:10,kw:"nio",        r:"L", gen:{b:"golem",g:"gGold",l:"#7a5010",crown:1}},
+ {n:"だいちのめぐみ",  t:"spell", c:2, spell:"mpup",       r:"R"},
+ {n:"追い打ちの矢",    t:"spell", c:2, spell:"dmg2draw",   r:"N"},
+ {n:"英雄の一撃",      t:"spell", c:3, spell:"face5",      r:"R"},
+ {n:"やまびこの号令",  t:"spell", c:4, spell:"token3",     r:"R"},
+ {n:"粛清の光",        t:"spell", c:5, spell:"destroybig", r:"SR"},
+ {n:"忘却の呪い",      t:"spell", c:5, spell:"silenceall", r:"R"},
+ {n:"きりさきの短剣",  t:"weapon",c:1, a:1, dur:2,         r:"N"},
+ {n:"雷神のヤリ",      t:"weapon",c:6, a:5, dur:3,         r:"SR"},
+ {n:"刃研ぎの弟子",  t:"unit", c:1, a:1, h:1, kw:"crybladed", cls:"sword", r:"N", gen:{b:"humanoid",g:"gSteel",l:"#12305a"}},
+ {n:"疾風の剣士",    t:"unit", c:2, a:3, h:1, kw:"charge",    cls:"sword", r:"N", gen:{b:"humanoid",g:"gSteel",l:"#12305a"}},
+ {n:"武器商の剣士",  t:"unit", c:3, a:2, h:3, kw:"cryweapon", cls:"sword", r:"R", gen:{b:"humanoid",g:"gGold",l:"#7a5010"}},
+ {n:"研ぎ澄まし",    t:"spell",c:2, spell:"weaponup",         cls:"sword", r:"R"},
+ {n:"鋼刃の剣聖",    t:"unit", c:6, a:5, h:6, kw:"crybladed", cls:"sword", r:"SR",gen:{b:"humanoid",g:"gSteel",l:"#12305a",crown:1}},
+ {n:"剣聖リオン",    t:"unit", c:7, a:6, h:6, kw:"two",       cls:"sword", r:"L", gen:{b:"humanoid",g:"gGold",l:"#7a5010",crown:1}},
+ {n:"石割りの拳士",  t:"unit", c:1, a:1, h:1, kw:"charge", cls:"monk", r:"N", gen:{b:"humanoid",g:"gRed",l:"#70140a"}},
+ {n:"円陣の武僧",    t:"unit", c:3, a:3, h:3, kw:"cheer",  cls:"monk", r:"R", gen:{b:"humanoid",g:"gRed",l:"#70140a"}},
+ {n:"荒行の求道者",  t:"unit", c:4, a:3, h:5, kw:"enrage", cls:"monk", r:"R", gen:{b:"humanoid",g:"gBrown",l:"#4a3014"}},
+ {n:"気合の一喝",    t:"spell",c:3, spell:"buffcharge",    cls:"monk", r:"R"},
+ {n:"闘気の化身",    t:"unit", c:6, a:6, h:5, kw:"growth", cls:"monk", r:"SR",gen:{b:"humanoid",g:"gFlame",l:"#8f2403",horn:1}},
+ {n:"荷運びの丁稚",  t:"unit", c:1, a:1, h:1, kw:"crymp",   cls:"merchant", r:"R", gen:{b:"humanoid",g:"gGold",l:"#7a5010"}},
+ {n:"競りの仕切り屋",t:"unit", c:3, a:3, h:2, kw:"crydraw", cls:"merchant", r:"R", gen:{b:"humanoid",g:"gGold",l:"#7a5010"}},
+ {n:"隊商の護衛",    t:"unit", c:4, a:3, h:5, kw:"shield",  cls:"merchant", r:"R", gen:{b:"humanoid",g:"gBrown",l:"#4a3014"}},
+ {n:"金貨の雨",      t:"spell",c:5, spell:"draw3heal",      cls:"merchant", r:"R"},
+ {n:"豪商ゴルドー",  t:"unit", c:7, a:5, h:8, kw:"crymp",   cls:"merchant", r:"L", gen:{b:"humanoid",g:"gGold",l:"#7a5010",crown:1}},
+ {n:"星見のみならい",  t:"unit", c:1, a:1, h:1, kw:"tlink",      cls:"oracle", r:"N", gen:{b:"humanoid",g:"gCobalt",l:"#132356"}},
+ {n:"予言のかがみ",    t:"unit", c:2, a:1, h:3, kw:"crydraw",    cls:"oracle", r:"R", gen:{b:"golem",g:"gCobalt",l:"#132356"}},
+ {n:"月光の占星術師",  t:"unit", c:4, a:3, h:4, kw:"crytension", cls:"oracle", r:"R", gen:{b:"humanoid",g:"gPurple",l:"#2b0d4d"}},
+ {n:"天啓のとばり",    t:"spell",c:3, spell:"scry2",             cls:"oracle", r:"R"},
+ {n:"運命神アストラ",  t:"unit", c:7, a:5, h:7, kw:"tlink",      cls:"oracle", r:"L", gen:{b:"humanoid",g:"gCobalt",l:"#132356",crown:1,wing:1}},
+ {n:"血啜りコウモリ",t:"unit", c:1, a:1, h:1, kw:"drain",    cls:"dark", r:"N", gen:{b:"beast",g:"gMaroon",l:"#200d12",wing:1}},
+ {n:"骸の従僕",      t:"unit", c:2, a:2, h:2, kw:"lastdraw", cls:"dark", r:"N", gen:{b:"undead",g:"gMaroon",l:"#200d12"}},
+ {n:"生贄の祭壇",    t:"unit", c:3, a:3, h:2, kw:"cryburn",  cls:"dark", r:"R", gen:{b:"undead",g:"gDark",l:"#07080d"}},
+ {n:"呪いの反噬",    t:"spell",c:3, spell:"selfdraw",        cls:"dark", r:"R"},
+ {n:"魔剣公ヴェイン",t:"unit", c:6, a:6, h:5, kw:"drain",    cls:"dark", r:"SR",gen:{b:"humanoid",g:"gDark",l:"#07080d",horn:1}},
+ {n:"路地のスリ",    t:"unit", c:1, a:1, h:1, kw:"stealth", cls:"thief", r:"N", gen:{b:"humanoid",g:"gGreen",l:"#14611f"}},
+ {n:"毒刃の忍び",    t:"unit", c:3, a:3, h:2, kw:"poison",  cls:"thief", r:"N", gen:{b:"humanoid",g:"gOlive",l:"#2b3b0d"}},
+ {n:"影渡りの盗賊",  t:"unit", c:4, a:4, h:3, kw:"onatk",   cls:"thief", r:"R", gen:{b:"humanoid",g:"gDark",l:"#07080d"}},
+ {n:"けむり玉",      t:"spell",c:2, spell:"stealthall",      cls:"thief", r:"R"},
+ {n:"闇夜の首領",    t:"unit", c:6, a:6, h:5, kw:"stealth", cls:"thief", r:"SR",gen:{b:"humanoid",g:"gDark",l:"#07080d",crown:1}},
+ {n:"呪文の写し手",  t:"unit", c:1, a:1, h:1, kw:"crydraw",  cls:"mage", r:"N", gen:{b:"humanoid",g:"gPurple",l:"#2b0d4d"}},
+ {n:"氷結の魔導書",  t:"unit", c:2, a:1, h:3, kw:"seal",     cls:"mage", r:"R", gen:{b:"golem",g:"gCobalt",l:"#132356"}},
+ {n:"業火の魔女",    t:"unit", c:4, a:3, h:4, kw:"cryaoe2",  cls:"mage", r:"R", gen:{b:"humanoid",g:"gFlame",l:"#8f2403"}},
+ {n:"炎獄の轟き",    t:"spell",c:6, spell:"aoeface3",        cls:"mage", r:"SR"},
+ {n:"大賢者メルヴィン",t:"unit",c:8, a:6, h:8, kw:"cryaoe4", cls:"mage", r:"L", gen:{b:"humanoid",g:"gPurple",l:"#2b0d4d",crown:1}},
+ {n:"見習い侍祭",    t:"unit", c:1, a:0, h:2, kw:"cryheal", cls:"priest", r:"N", gen:{b:"humanoid",g:"gBone",l:"#8d8672"}},
+ {n:"癒しの泉",      t:"unit", c:3, a:1, h:5, kw:"regen",   cls:"priest", r:"R", gen:{b:"elem",g:"gCobalt",l:"#132356",one:1}},
+ {n:"守護の光",      t:"unit", c:4, a:2, h:6, kw:"shield",  cls:"priest", r:"R", gen:{b:"humanoid",g:"gBone",l:"#8d8672",wing:1}},
+ {n:"再生の秘跡",    t:"spell",c:4, spell:"healall",         cls:"priest", r:"R"},
+ {n:"聖女アルテア",  t:"unit", c:7, a:5, h:8, kw:"cheer",   cls:"priest", r:"L", gen:{b:"humanoid",g:"gBone",l:"#8d8672",crown:1,wing:1}},
  {n:"魔力の暴走",    t:"spell", c:4, spell:"dmg6", cls:"mage", r:"R"},
  {n:"てんしのはね",  t:"spell", c:2, spell:"heal4draw", cls:"priest", r:"N"},
  {n:"れんげきの構え",t:"spell", c:2, spell:"buffall", cls:"monk", r:"R"},
@@ -776,20 +887,37 @@ const KW_TXT = {charge:"速攻", nio:"におうだち", cry2:"召喚時:敵1体�
   pierce:"貫通(後方も攻撃)", spierce:"超貫通(リーダーまで)",
   two:"2回攻撃", metal:"メタルボディ", poison:"毒", tlink:"テンションリンク",
   boost:"スキルブースト", onatk:"攻撃時:リーダーに1", cheer:"おうえん", peak:"絶好調", seal:"封印",
-  cryaoe2:"召喚時:敵全体に2", cryseal:"召喚時:敵全体を封印"};
+  cryaoe2:"召喚時:敵全体に2", cryseal:"召喚時:敵全体を封印",
+  kin:"同族の絆", kincheap:"同族を軽くする", ramp:"召喚時:MP上限+1",
+  crymp:"召喚時:MP上限+1", crydraw:"召喚時:1ドロー", cryburn:"召喚時:リーダーに2",
+  crysilence:"召喚時:沈黙", crydestroy:"召喚時:破壊", cryaoe4:"召喚時:敵全体に4",
+  crytension:"召喚時:テンション+1", cryweapon:"召喚時:武器装備", crybladed:"刃の共鳴",
+  lastdraw:"死亡時:1ドロー", shield:"バリア", enrage:"怒り", growth:"成長", regen:"自己再生",
+  racebuff:"種族のきずな", racesolo:"同族の誇り",
+  chargeatk:"速攻＋攻撃時1", faceless:"におうだち無視の壁"};
 const KW_MARK = {nio:"⛨", stealth:"🌫", snipe:"🎯", pierce:"➤", spierce:"⚔",
   two:"⚡2", metal:"🛡", poison:"☠", tlink:"🔗", boost:"↑", cheer:"📣", peak:"★", seal:"🔒",
   charge:"💨", drain:"🩸", cry2:"✦", cryheal:"✚", bomb:"💥", onatk:"➜",
-  cryaoe2:"🔥", cryseal:"❄"};
-const SPELL_TXT = {destroy:"敵ユニット1体を破壊する", silence:"敵1体の特性を消し+0/-2", wipe:"すべてのユニットを破壊する",
+  cryaoe2:"🔥", cryseal:"❄", kin:"🤝", kincheap:"⤓", ramp:"💠", chargeatk:"💨➜", faceless:"⛨🎯",
+  crymp:"💠", crydraw:"🃏", cryburn:"🔥", crysilence:"🤐", crydestroy:"☠", cryaoe4:"🔥4",
+  crytension:"⚡+", cryweapon:"🗡", crybladed:"🗡+", lastdraw:"🃏", shield:"🔵", enrage:"😡",
+  growth:"📈", regen:"💚", racebuff:"🤝", racesolo:"🤝"};
+const SPELL_TXT = {mpup:"最大MP+1＋1枚引く", dmg2draw:"敵1体に2ダメージ＋1枚引く",
+  face5:"敵リーダーに5ダメージ", token3:"1/1のユニットを3体召喚",
+  destroybig:"攻撃力5以上の敵をすべて破壊", silenceall:"敵全体の特性を消す",
+  weaponup:"武器を+2攻撃・耐久+1", buffcharge:"味方全体が速攻を得る",
+  draw3heal:"3枚引く＋リーダーHP+4", scry2:"デッキを3枚見て2枚を手札に",
+  selfdraw:"自分に3ダメージ＋3枚引く", stealthall:"味方全体がステルスを得る",
+  aoeface3:"敵全体と敵リーダーに3ダメージ", healall:"味方全体のHPを全回復",
+  destroy:"敵ユニット1体を破壊する", silence:"敵1体の特性を消し+0/-2", wipe:"すべてのユニットを破壊する",
   aoe4:"敵全体に4ダメージ", scry:"デッキを2枚めくり1枚を手札に",
   dmg2:"敵1体に2ダメージ", dmg3:"敵1体に3ダメージ", dmg4:"敵1体に4ダメージ",
-  dmg6:"敵1体に6ダメージ", dmgrow3:"横1段の敵に3ダメージ",
+  dmg6:"敵1体に6ダメージ", dmgrow3:"たて1列（前衛とその後ろ）に3ダメージ",
   aoe2:"敵全体に2ダメージ", aoe3:"敵全体に3ダメージ", aoe5:"敵全体に5ダメージ",
   heal5:"リーダーHP+5", heal8:"リーダーHP+8", heal4draw:"リーダーHP+4＋1ドロー",
   buff:"味方1体に+2/+2", buffall:"味方全体に+1/+0", draw2:"カードを2枚引く",
   selfdmg8:"自分に3ダメージ／敵1体に8ダメージ"};
-const TARGET_SPELLS = ["dmg2","dmg3","dmg4","dmg6","dmgrow3","selfdmg8","destroy","silence"];
+const TARGET_SPELLS = ["dmg2","dmg3","dmg4","dmg6","dmgrow3","selfdmg8","destroy","silence","dmg2draw"];
 const ALLY_SPELLS = ["buff"];
 
 // ============ オリジナルSVGモンスターアート ============
@@ -871,6 +999,22 @@ const _I={
  blood:(g,l)=>`<path d="M32 3q17 23 17 33a17 17 0 1 1-34 0Q15 26 32 3Z" fill="url(#${g})" stroke="${l}" stroke-width="2"/>${GL(25,26,5,3.4,.35)}`,
 };
 const SPELL_ART={
+ "だいちのめぐみ":{i:"rocks",g:"gGreen",l:"#12652f"},
+ "追い打ちの矢":{i:"bolt",g:"gSteel",l:"#12305a"},
+ "英雄の一撃":{i:"sword",g:"gRed",l:"#70140a"},
+ "やまびこの号令":{i:"fist",g:"gCream",l:"#6b5c3d"},
+ "粛清の光":{i:"cross",g:"gYellow",l:"#95700a"},
+ "忘却の呪い":{i:"rain",g:"gPurple",l:"#3d1c78"},
+ "きりさきの短剣":{i:"sword",g:"gSteel",l:"#12305a"},
+ "雷神のヤリ":{i:"bolt",g:"gGold",l:"#7a5010"},
+ "研ぎ澄まし":{i:"sword",g:"gGold",l:"#7a5010"},
+ "気合の一喝":{i:"fist",g:"gRed",l:"#70140a"},
+ "金貨の雨":{i:"rain",g:"gGold",l:"#7a5010"},
+ "天啓のとばり":{i:"wheel",g:"gCobalt",l:"#132356"},
+ "呪いの反噬":{i:"blood",g:"gMaroon",l:"#200d12"},
+ "けむり玉":{i:"rain",g:"gDark",l:"#07080d"},
+ "炎獄の轟き":{i:"burst",g:"gFlame",l:"#8f2403"},
+ "再生の秘跡":{i:"cross",g:"gBone",l:"#8d8672"},
  "一閃":{i:"sword",g:"gSteel",l:"#12305a"},
  "沈黙の霧":{i:"rain",g:"gCloud",l:"#1e2431"},
  "終焉のラグナロク":{i:"burst",g:"gRed",l:"#70140a"},
@@ -1445,6 +1589,9 @@ function banner(txt){
 function hasWall(pl){ return [0,1,2].every(r=> pl.board[r] && !pl.board[r].stealth); }
 function attackTargets(foe, sniper){
   const all = foe.board.map((u,i)=>u?i:-1).filter(i=>i>=0).filter(i=>!(foe.board[i].stealth));
+  // ねらい撃ちでも避けられない「絶対のにおうだち」
+  const hard = all.filter(i=>i<3 && foe.board[i].kw==="faceless");
+  if(hard.length) return { units:hard, leader:false };
   if(sniper) return { units:all, leader:!hasWall(foe) }; // ねらい撃ちでもウォール中はリーダー不可（本家準拠）
   const nio = all.filter(i=>i<3 && foe.board[i].kw==="nio");
   if(nio.length) return { units:nio, leader:false };
@@ -1455,7 +1602,9 @@ function spellTargets(foe){ return foe.board.map((u,i)=>u&&!u.stealth?i:-1).filt
 
 // ============ 戦闘処理 ============
 function mkUnit(card){ return { uid:uid++, n:card.n, e:card.e, a:card.a, h:card.h, maxH:card.h,
-  kw:card.kw||"", r:card.r, ready:card.kw==="charge", stealth:card.kw==="stealth",
+  kw:card.kw||"", r:card.r, race:card.race||raceOf(card),
+  shield:card.kw==="shield",
+  ready:card.kw==="charge"||card.kw==="chargeatk", stealth:card.kw==="stealth",
   usedTwo:false, poison:0, sealed:false }; }
 
 function summon(side, card, slot){
@@ -1491,6 +1640,66 @@ function summon(side, card, slot){
     const foe = side==="p"?S.e:S.p;
     log(`${card.n}の咆哮！ 敵全体に2ダメージ`);
     foe.board.forEach((x,i)=>{ if(x) dmgUnit(foe,i,2); });
+  }
+  // 同族の絆: 自分の場の同じ種族を+1/+1
+  if(card.kw==="kin"){
+    const race=raceOf(card);
+    let n=0; pl.board.forEach((x,i)=>{ if(x&&i!==slot&&raceOf(x)===race){ x.a++; x.h++; x.maxH++; n++; } });
+    log(n?`${card.n}の同族の絆！ ${race}${n}体が+1/+1`:`${card.n}を召喚（同族がいない）`);
+  }
+  // 同族を軽くする: 手札の同種族のコストを1下げる
+  if(card.kw==="kincheap"){
+    const race=raceOf(card);
+    let n=0; pl.hand.forEach(c=>{ if(raceOf(c)===race&&c.c>0){ c.c--; n++; } });
+    log(n?`${card.n}の効果！ 手札の${race}${n}枚のコストが1減った`:`${card.n}を召喚（手札に同族なし）`);
+  }
+  // MP加速
+  if(card.kw==="ramp"){
+    if(pl.mpMax<10){ pl.mpMax++; log(`${card.n}の効果！ MPの上限が${pl.mpMax}になった`); }
+    else log(`${card.n}を召喚（MPは既に上限）`);
+  }
+  // ===== 拡張セットの召喚時効果 =====
+  const foeP = side==="p"?S.e:S.p, foeSide = side==="p"?"e":"p";
+  const strongest = ()=>{ const t=spellTargets(foeP);
+    return t.length? t.sort((x,y)=>foeP.board[y].a-foeP.board[x].a)[0] : -1; };
+  if(card.kw==="crymp"){
+    if(pl.mpMax<10){ pl.mpMax++; log(`${card.n}の効果！ MPの上限が${pl.mpMax}になった`); }
+  }
+  if(card.kw==="crydraw"){ draw(pl,1); log(`${card.n}の効果！ カードを1枚引いた`); }
+  if(card.kw==="cryburn"){ log(`${card.n}の効果！ 相手リーダーに2ダメージ`); dmgLeader(foeSide,2); }
+  if(card.kw==="crysilence"){
+    const i=strongest();
+    if(i>=0){ const t=foeP.board[i]; log(`${card.n}の効果！ ${t.n}の特性を消した`);
+      t.kw=""; t.stealth=false; t.poison=0; t.sealed=false; t.shield=false; }
+  }
+  if(card.kw==="crydestroy"){
+    const i=strongest();
+    if(i>=0){ log(`${card.n}の効果！ ${foeP.board[i].n}を破壊した`); killUnit(foeP,i); }
+  }
+  if(card.kw==="cryaoe4"){
+    log(`${card.n}の効果！ 敵全体に4ダメージ`);
+    foeP.board.forEach((x,i)=>{ if(x) dmgUnit(foeP,i,4); });
+  }
+  if(card.kw==="crytension"){
+    pl.tension=Math.min(3,pl.tension+1); tensionLink(pl);
+    log(`${card.n}の効果！ テンションが${pl.tension}になった`);
+  }
+  if(card.kw==="cryweapon"){
+    pl.weapon={n:"従者の剣",a:2,dur:2}; pl.leaderReady=!pl.leaderAttacked;
+    log(`${card.n}の効果！ 従者の剣（2/2）を装備した`);
+  }
+  if(card.kw==="crybladed"&&pl.weapon){ u.a+=2; u.h+=2; u.maxH+=2; log(`${card.n}の刃の共鳴！ +2/+2`); }
+  // 種族シナジー
+  if(card.kw==="racebuff"){
+    const race=card.race||raceOf(card);
+    let n=0; pl.board.forEach((x,i)=>{ if(x&&i!==slot&&(x.race||"")===race){ x.a++; x.h++; x.maxH++; n++; } });
+    log(n?`${card.n}の種族のきずな！ ${race}${n}体が+1/+1`:`${card.n}を召喚（同族がいない）`);
+  }
+  if(card.kw==="racesolo"){
+    const race=card.race||raceOf(card);
+    if(pl.board.some((x,i)=>x&&i!==slot&&(x.race||"")===race)){
+      u.a+=2; u.h+=2; u.maxH+=2; log(`${card.n}の同族の誇り！ +2/+2`);
+    }
   }
   // レジェンド固有: 召喚時に敵全体を封印
   if(card.kw==="cryseal"){
@@ -1537,13 +1746,16 @@ function killUnit(pl,idx){
     log(`${u.n}の死亡時効果！ 敵全体に1ダメージ`);
     foe.board.forEach((x,i)=>{ if(x) dmgUnit(foe,i,1); });
   }
+  if(u.kw==="lastdraw"){ draw(pl,1); log(`${u.n}の死亡時効果！ カードを1枚引いた`); }
 }
 function dmgUnit(pl,idx,amount){
   const u=pl.board[idx]; if(!u) return;
+  if(u.shield){ u.shield=false; log(`${u.n}のバリアがダメージを防いだ`); fxPop(pl===S.p?"p":"e", idx, 0); return; }
   if(u.kw==="metal") amount=Math.min(amount,2);   // メタルボディ: 受けるダメージは最大2
   u.h-=amount;
   fxPop(pl===S.p?"p":"e", idx, amount); sfx("dmg");
-  if(u.h<=0) killUnit(pl,idx);
+  if(u.h<=0){ killUnit(pl,idx); return; }
+  if(u.kw==="enrage"&&amount>0){ u.a+=2; log(`${u.n}の怒り！ 攻撃力が${u.a}になった`); }
 }
 function dmgLeader(side,amount){
   S[side].hp-=amount; fxPop(side,"leader",amount); sfx("dmg");
@@ -1606,9 +1818,9 @@ function attack(side, aSlot, tSlot){
   const atk=me.board[aSlot]; if(!atk||!atk.ready) return;
   // 2回攻撃: 1度目の攻撃では行動権を残す
   if(atk.kw==="two"&&!atk.usedTwo){ atk.usedTwo=true; }
-  else atk.ready=false;
+  else { atk.ready=false; atk.acted=true; }
   atk.stealth=false;
-  if(atk.kw==="onatk"){ log(`${atk.n}の攻撃時効果！ リーダーに1ダメージ`); dmgLeader(side==="p"?"e":"p",1); if(checkWin()) return; }
+  if(atk.kw==="onatk"||atk.kw==="chargeatk"){ log(`${atk.n}の攻撃時効果！ リーダーに1ダメージ`); dmgLeader(side==="p"?"e":"p",1); if(checkWin()) return; }
   if(tSlot==="leader"){
     log(`${atk.n}の攻撃！ リーダーに${atk.a}ダメージ`);
     if(atk.kw==="drain"){ healLeader(side,atk.a); log(`吸収！ HP${atk.a}回復`); }
@@ -1639,14 +1851,57 @@ function attack(side, aSlot, tSlot){
   }
 }
 
-const DMG_SPELL={dmg2:2,dmg3:3,dmg4:4,dmg6:6,selfdmg8:8};
+const DMG_SPELL={dmg2:2,dmg3:3,dmg4:4,dmg6:6,selfdmg8:8,dmg2draw:2};
 function castSpell(side, card, tSlot){
   const me=S[side], foe=S[side==="p"?"e":"p"];
   if(DMG_SPELL[card.spell]!==undefined){
     const d=DMG_SPELL[card.spell];
     if(card.spell==="selfdmg8"){ log(`${card.n}！ 自分に3ダメージ`); dmgLeader(side,3); if(me.hp<=0) return; }
+    if(card.spell==="dmg2draw") draw(me,1);
     if(tSlot==="leader"){ log(`${card.n}！ リーダーに${d}ダメージ`); dmgLeader(side==="p"?"e":"p",d); }
     else if(foe.board[tSlot]){ log(`${card.n}！ ${foe.board[tSlot].n}に${d}ダメージ`); dmgUnit(foe,tSlot,d); }
+  } else if(card.spell==="mpup"){
+    if(me.mpMax<10) me.mpMax++;
+    draw(me,1); log(`${card.n}！ MPの上限が${me.mpMax}になり、1枚引いた`);
+  } else if(card.spell==="face5"){
+    log(`${card.n}！ 相手リーダーに5ダメージ`); dmgLeader(side==="p"?"e":"p",5);
+  } else if(card.spell==="token3"){
+    let n=0; for(let i=0;i<3;i++){ if(summon(side,{n:"つわもの",t:"unit",c:0,a:1,h:1,gen:{b:"humanoid",g:"gSteel",l:"#12305a"}})) n++; }
+    log(`${card.n}！ つわものを${n}体よび出した`);
+  } else if(card.spell==="destroybig"){
+    let n=0; foe.board.forEach((u,i)=>{ if(u&&u.a>=5){ killUnit(foe,i); n++; } });
+    log(`${card.n}！ 攻撃力5以上の敵${n}体を破壊した`);
+  } else if(card.spell==="silenceall"){
+    let n=0; foe.board.forEach(u=>{ if(u){ u.kw=""; u.stealth=false; u.poison=0; u.sealed=false; u.shield=false; n++; } });
+    log(`${card.n}！ 敵${n}体の特性を消した`);
+  } else if(card.spell==="weaponup"){
+    if(me.weapon){ me.weapon.a+=2; me.weapon.dur++; log(`${card.n}！ ${me.weapon.n}が${me.weapon.a}/${me.weapon.dur}になった`); }
+    else log(`${card.n}！ しかし武器を装備していない`);
+  } else if(card.spell==="buffcharge"){
+    let n=0; me.board.forEach(u=>{ if(u&&!u.ready&&!u.wasSealed){ u.ready=true; n++; } });
+    log(`${card.n}！ 味方${n}体がすぐ動けるようになった`);
+  } else if(card.spell==="draw3heal"){
+    draw(me,3); healLeader(side,4); log(`${card.n}！ 3枚引いてHP4回復`);
+  } else if(card.spell==="scry2"){
+    const seen=[]; for(let i=0;i<3&&me.deck.length;i++) seen.push(me.deck.pop());
+    seen.sort((a,b)=>a.c-b.c);
+    let n=0; while(seen.length>1&&me.hand.length<10){ me.hand.push(seen.shift()); n++; }
+    seen.forEach(c=>me.deck.push(c)); shuffle(me.deck);
+    log(`${card.n}！ デッキを見て${n}枚を手札に加えた`);
+  } else if(card.spell==="selfdraw"){
+    log(`${card.n}！ 自分に3ダメージ`); dmgLeader(side,3);
+    if(me.hp>0){ draw(me,3); log("そして3枚引いた"); }
+  } else if(card.spell==="stealthall"){
+    let n=0; me.board.forEach(u=>{ if(u&&!u.stealth){ u.stealth=true; n++; } });
+    log(`${card.n}！ 味方${n}体が姿を消した`);
+  } else if(card.spell==="aoeface3"){
+    log(`${card.n}！ 敵全体とリーダーに3ダメージ`);
+    foe.board.forEach((u,i)=>{ if(u) dmgUnit(foe,i,3); });
+    dmgLeader(side==="p"?"e":"p",3);
+  } else if(card.spell==="healall"){
+    let n=0; me.board.forEach(u=>{ if(u&&u.h<u.maxH){ u.h=u.maxH; n++; } });
+    healLeader(side,3);
+    log(`${card.n}！ 味方${n}体が全回復、リーダーもHP3回復`);
   } else if(card.spell==="destroy"){
     if(tSlot!=="leader"&&foe.board[tSlot]){ log(`${card.n}！ ${foe.board[tSlot].n}を破壊した`); killUnit(foe,tSlot); }
   } else if(card.spell==="silence"){
@@ -1684,7 +1939,7 @@ function castSpell(side, card, tSlot){
       log(`${card.n}！ ${me.board[i].n}が+2/+2`); }
   } else if(card.spell==="dmgrow3"){
     const row=tSlot%3;
-    log(`${card.n}！ ${["上","中","下"][row]}段に3ダメージ`);
+    log(`${card.n}！ ${["左","中","右"][row]}の列に3ダメージ`);
     dmgUnit(foe,row,3); dmgUnit(foe,row+3,3);
   } else if(card.spell==="aoe3"){
     log(`${card.n}！ 敵全体に3ダメージ`);
@@ -1704,8 +1959,11 @@ function fireTension(side, tSlot){
     if(tSlot==="leader"){ log("テンションスキル【マジックバースト】！ リーダーに3ダメージ"); dmgLeader(foeSide,3); }
     else { log(`テンションスキル【マジックバースト】！ ${S[foeSide].board[tSlot].n}に3ダメージ`); dmgUnit(S[foeSide],tSlot,3); }
   } else if(pl.cls==="priest"){
-    healLeader(side,5); draw(pl,1);
-    log("テンションスキル【いやしのひかり】！ HP5回復＋1ドロー");
+    // HPが減っているほど強く効く（回復役が腐らないように）
+    const amt = pl.hp<=13 ? 8 : 5;
+    healLeader(side,amt); draw(pl,1);
+    let n=0; pl.board.forEach(u=>{ if(u&&u.h<u.maxH){ u.h=Math.min(u.maxH,u.h+2); n++; } });
+    log(`テンションスキル【いやしのひかり】！ HP${amt}回復＋1ドロー${n?`＋味方${n}体がHP2回復`:""}`);
   } else if(pl.cls==="monk"){
     let n=0; pl.board.forEach(u=>{ if(u){ u.a++; u.h++; u.maxH++; n++; } });
     log(`テンションスキル【きあいため】！ 味方${n}体が+1/+1`);
@@ -1815,7 +2073,12 @@ function onMySlotClick(slot){
   const u=S.p.board[slot];
   if(!u){ S.sel=null; showDetail(null); render(); return; }
   showUnitDetail(u);                      // 自分のユニットも情報表示
-  if(!u.ready){ S.sel=null; render(); return; }
+  if(!u.ready){
+    if(u.wasSealed) coach("🔒 <b>封印</b>：このユニットは相手の効果で、このターンは攻撃できません。\n次のターンには動けるようになります。");
+    else if(u.acted) coach("このユニットは今ターンもう攻撃しました。次のターンにまた動けます。\n（⚡2回攻撃を持つカードだけ、1ターンに2回まで殴れます）");
+    else coach("このユニットは出したばかりです。攻撃できるのは次のターンから。\n「💨速攻」を持つカードだけ、出したそのターンに攻撃できます。");
+    S.sel=null; render(); return;
+  }
   S.sel=(S.sel===slot)?null:slot; S.pending=null; S.selLeader=false; render();
 }
 function onEnemyTarget(tSlot){
@@ -1836,15 +2099,15 @@ function onEnemyTarget(tSlot){
   if(S.sel!==null){
     const atk=S.p.board[S.sel];
     const tg=attackTargets(S.e, atk.kw==="snipe");
-    if(tSlot==="leader" ? !tg.leader : !tg.units.includes(tSlot)){ log("その対象は攻撃できない！"); return; }
-    const a=S.sel; S.sel=null; busy=true;
+    if(tSlot==="leader" ? !tg.leader : !tg.units.includes(tSlot)){ coach(whyCantAttack(tSlot)); return; }
+    const a=S.sel; S.sel=null; coachHide(); busy=true;
     animAttack("p",a,tSlot,()=>{ unlock(); render(); });
     return;
   }
   if(S.selLeader&&S.p.weapon&&S.p.leaderReady){
     const tg=attackTargets(S.e,false);
-    if(tSlot==="leader" ? !tg.leader : !tg.units.includes(tSlot)){ log("その対象は攻撃できない！"); return; }
-    S.selLeader=false; busy=true;
+    if(tSlot==="leader" ? !tg.leader : !tg.units.includes(tSlot)){ coach(whyCantAttack(tSlot)); return; }
+    S.selLeader=false; coachHide(); busy=true;
     animAttack("p","leader",tSlot,()=>{ unlock(); render(); });
   }
 }
@@ -1913,7 +2176,13 @@ function startTurn(side){
   // 毒: ターン開始時にダメージ
   pl.board.forEach((u,i)=>{ if(u&&u.poison>0){ const d=u.poison; u.poison=0;
     log(`${u.n}は毒で${d}ダメージ`); dmgUnit(pl,i,d); } });
-  pl.board.forEach(u=>{ if(u){ u.usedTwo=false; u.ready=!u.sealed; u.sealed=false; } });
+  // 封印されていた事実はターン中ずっと残す（なぜ動けないか分かるように）
+  pl.board.forEach(u=>{ if(u){ u.usedTwo=false; u.wasSealed=u.sealed; u.ready=!u.sealed; u.sealed=false; u.acted=false; } });
+  // ターン開始時に育つ／回復する特性
+  pl.board.forEach(u=>{ if(!u) return;
+    if(u.kw==="growth"){ u.a++; u.h++; u.maxH++; log(`${u.n}が成長した（${u.a}/${u.h}）`); }
+    if(u.kw==="regen"&&u.h<u.maxH){ u.h=Math.min(u.maxH,u.h+2); log(`${u.n}が回復した（HP${u.h}）`); }
+  });
   pl.leaderAttacked=false;
   pl.discarded=false;
   pl.leaderReady=!!pl.weapon;
@@ -2025,7 +2294,7 @@ function aiTensionPhase(ai){
       else if(ai.cls==="sword"){ if(!ai.weapon) fireTension("e"); }
       else if(ai.cls==="monk"){ if(ai.board.filter(Boolean).length>=1) fireTension("e"); }
       else if(ai.cls==="thief"){ if(ai.board.some(s=>s===null)) fireTension("e"); }
-      else if(ai.cls==="priest"){ if(ai.hp<=23||ai.hand.length<=4) fireTension("e"); }
+      else if(ai.cls==="priest"){ if(ai.hp<=23||ai.hand.length<=4||ai.board.some(u=>u&&u.h<u.maxH)) fireTension("e"); }
       else fireTension("e");
     }
   }
@@ -2117,15 +2386,19 @@ function tdots(el,cur){
   el.innerHTML="";
   for(let i=0;i<3;i++){ const d=document.createElement("div"); d.className="tdot"+(i<cur?" full":""); el.appendChild(d); }
 }
+const _seenUnits=new Set();   // 一度描画したユニットは再アニメしない
 function unitDiv(u, mine, slot){
   const d=document.createElement("div");
   d.className="unit";
+  if(!_seenUnits.has(u.uid)){ d.classList.add("spawned"); _seenUnits.add(u.uid); }
   if(u.stealth) d.classList.add("stealth");
   if(mine&&u.ready&&!busy) d.classList.add("ready");
   if(mine&&S.sel===slot) d.classList.add("selected");
   const mark=KW_MARK[u.kw]||"";
   // 状態異常も盤面で見えるようにする（毒・封印）
-  const st=(u.poison>0?'<span class="stmark st1">☠</span>':"")+(u.sealed?'<span class="stmark st2">🔒</span>':"");
+  const st=(u.poison>0?'<span class="stmark st1">☠</span>':"")
+    +((u.sealed||u.wasSealed)?'<span class="stmark st2">🔒</span>':"")
+    +(mine&&!u.ready&&!u.wasSealed?'<span class="stmark st2">😴</span>':"");
   d.innerHTML=`${mark?`<span class="kwmark">${mark}</span>`:""}${st}<div class="face">${art(u.n,38)||u.e}</div><div class="uname">${u.n}</div>
     <div class="badge batk">${u.a}</div><div class="badge bhp" style="${u.h<u.maxH?'color:#ffb0a0':''}">${u.h}</div>`;
   d.title=`${u.n}  攻${u.a}/HP${u.h}`+(u.kw?`\n${KW_TXT[u.kw]}`:"");
@@ -2139,7 +2412,7 @@ const KW_DESC={
  bomb:"死亡時、敵ユニット全体に1ダメージを与える。",
  cryheal:"召喚時、自分のリーダーのHPを3回復する。",
  drain:"攻撃で与えたダメージと同じだけ自分のリーダーのHPが回復する。",
- stealth:"相手の攻撃・効果の対象にならない。自分が攻撃すると解除される。",
+ stealth:"相手に個別の対象として選ばれない（全体攻撃は受ける）。自分が攻撃すると解除される。",
  snipe:"におうだちや前列の守りを無視して攻撃できる。",
  pierce:"前列を攻撃したとき、その後ろのユニットにも同じダメージを与える。",
  spierce:"貫通に加え、相手リーダーにも攻撃力の半分のダメージを与える。",
@@ -2153,7 +2426,28 @@ const KW_DESC={
  peak:"召喚時、自分のリーダーのHPが満タンなら+2/+2される。",
  seal:"召喚時、敵ユニット1体（最も攻撃力が高いもの）は次の相手のターンに攻撃できない。",
  cryaoe2:"召喚時、敵ユニット全体に2ダメージを与える。",
- cryseal:"召喚時、敵ユニット全体が次の相手のターンに攻撃できなくなる。"
+ cryseal:"召喚時、敵ユニット全体が次の相手のターンに攻撃できなくなる。",
+ kin:"召喚時、自分の場にいる同じ種族の他のユニットすべてを+1/+1する。",
+ kincheap:"召喚時、手札にある同じ種族のカードのコストを1減らす。",
+ ramp:"召喚時、自分のMPの上限が1増える（最大10）。",
+ chargeatk:"速攻を持ち、攻撃するたび相手リーダーに1ダメージを与える。",
+ faceless:"におうだちを持ち、さらにねらい撃ちでも無視されない。",
+ crymp:"召喚時、自分のMPの上限が1増える（最大10）。",
+ crydraw:"召喚時、カードを1枚引く。",
+ cryburn:"召喚時、相手のリーダーに2ダメージを与える。",
+ crysilence:"召喚時、敵ユニット1体（最も攻撃力が高いもの）の特性を消す。",
+ crydestroy:"召喚時、敵ユニット1体（最も攻撃力が高いもの）を破壊する。",
+ cryaoe4:"召喚時、敵ユニット全体に4ダメージを与える。",
+ crytension:"召喚時、自分のテンションが1たまる。",
+ cryweapon:"召喚時、攻撃力2・耐久2の武器を装備する。",
+ crybladed:"召喚時、自分が武器を装備していれば+2/+2される。",
+ lastdraw:"このユニットが倒れたとき、カードを1枚引く。",
+ shield:"最初に受けるダメージを1回だけ無効にする。",
+ enrage:"ダメージを受けて生き残るたび、攻撃力が2上がる。",
+ growth:"自分のターン開始時に+1/+1される。",
+ regen:"自分のターン開始時にHPが2回復する。",
+ racebuff:"召喚時、自分の場にいる同じ種族の他のユニットすべてを+1/+1する。",
+ racesolo:"召喚時、自分の場に同じ種族の他のユニットがいれば+2/+2される。"
 };
 function showDetail(c){
   const d=document.getElementById("detail");
@@ -2169,6 +2463,44 @@ function showDetail(c){
     ${c.kw?`<div class="dkw">${KW_TXT[c.kw]}</div>`:""}
     <div class="dtxt">${body}</div>`;
   d.classList.add("on");
+}
+// ============ 初心者向けガイド ============
+let coachTimer=null;
+function coach(msg){
+  if(SIM||!msg) return;
+  const el=document.getElementById("coach");
+  el.innerHTML=msg; el.classList.add("on");
+  clearTimeout(coachTimer);
+  coachTimer=setTimeout(()=>el.classList.remove("on"), 4200);
+}
+function coachHide(){ const el=document.getElementById("coach"); if(el) el.classList.remove("on"); }
+// 「におうだち」を持つ敵の前列インデックス
+function nioOf(foe){ return [0,1,2].filter(j=>foe.board[j]&&!foe.board[j].stealth&&
+  (foe.board[j].kw==="nio"||foe.board[j].kw==="faceless")); }
+// 盤面に出す短いラベル
+function whyLabel(i){
+  const e=S.e, nio=nioOf(e);
+  if(e.board[i].stealth) return "🌫 ねらえない";
+  if(nio.length&&!nio.includes(i)) return "⛨ 壁の後ろ";
+  if(i>=3&&e.board[i-3]&&!e.board[i-3].stealth) return "🛡 前衛が守り中";
+  return "ねらえない";
+}
+// タップしたときに出す詳しい理由
+function whyCantAttack(tSlot){
+  const e=S.e, nio=nioOf(e);
+  if(tSlot==="leader"){
+    if(nio.length) return `⛨ <b>におうだち</b>：${e.board[nio[0]].n} がいる間は、それ以外を攻撃できません。\nまず ${e.board[nio[0]].n} を倒すか、特技で処理しましょう。`;
+    if(hasWall(e)) return `🧱 <b>ウォール</b>：相手の前衛3マスが全部うまっているので、リーダーには攻撃できません。\n前衛のどれかを倒せば道が開きます。`;
+    return "いまリーダーは攻撃できません。";
+  }
+  const u=e.board[tSlot];
+  if(!u) return "そこには誰もいません。";
+  if(u.stealth) return `🌫 <b>ステルス</b>：このユニットは攻撃も特技も当たりません。\n相手が攻撃してくると解除されます。それまでは他をねらいましょう。`;
+  if(nio.length&&!nio.includes(tSlot))
+    return `⛨ <b>におうだち</b>：${e.board[nio[0]].n} がいる間、他のユニットは攻撃できません。\n先に ${e.board[nio[0]].n} を倒しましょう（🎯ねらい撃ちなら無視できます）。`;
+  if(tSlot>=3&&e.board[tSlot-3]&&!e.board[tSlot-3].stealth)
+    return `🛡 <b>前衛が守っています</b>：真上の ${e.board[tSlot-3].n} がいる間、この後衛は攻撃できません。\n${e.board[tSlot-3].n} を倒すか、🎯ねらい撃ち・特技でねらいましょう。`;
+  return "その対象は攻撃できません。";
 }
 function showUnitDetail(u){
   const base=POOL.find(p=>p.n===u.n)||{};
@@ -2223,18 +2555,30 @@ function render(){
         if(attacking&&atg.units.includes(i)) ok=true;
         if(spelling&&stg.includes(i)) ok=true;
         if(ok&&!busy){ d.classList.add("targetable"); d.onclick=()=>onEnemyTarget(i); }
-        else { d.onclick=()=>showUnitDetail(u); if(attacking) d.classList.add("protected"); }
+        else {
+          d.onclick=()=>{ showUnitDetail(u); if(attacking) coach(whyCantAttack(i)); };
+          if(attacking){ d.classList.add("protected"); d.dataset.why=whyLabel(i); }
+        }
+        // 前衛が真下の後衛を守っていることを線で示す
+        if(i<3&&S.e.board[i+3]&&!u.stealth) slot.classList.add("guarding");
         slot.appendChild(d);
       }
       g.appendChild(slot);
     });
   });
   const wall=hasWall(S.e);
-  document.getElementById("wallE").style.display=wall?"block":"none";
+  const wm=document.getElementById("wallE");
+  wm.style.display=wall?"block":"none";
+  wm.textContent="🧱 リーダーは攻撃できない";
   const pedE=document.getElementById("pedE");
   const leaderOk = (attacking&&atg.leader) || (spelling&&!rowOnly);
   pedE.classList.toggle("targetable", !!leaderOk&&!busy);
-  pedE.onclick=()=>{ if(leaderOk&&!busy) onEnemyTarget("leader"); };
+  pedE.onclick=()=>{
+    if(busy) return;
+    if(leaderOk) onEnemyTarget("leader");
+    else if(attacking) coach(whyCantAttack("leader"));   // なぜ殴れないかを必ず伝える
+    else if(wall) coach("🧱 <b>ウォール</b>：相手の前衛3マスが全部うまっている間、リーダーには攻撃できません。\n前衛を1体でも倒せば道が開きます。");
+  };
   const pedP=document.getElementById("pedP");
   pedP.classList.toggle("wready", !!(S.p.weapon&&S.p.leaderReady&&!busy&&!S.selLeader));
   pedP.classList.toggle("wsel", !!S.selLeader);
@@ -2245,6 +2589,7 @@ function render(){
     if(c.c<=S.p.mp&&!busy) d.classList.add("playable");
     if(S.pending&&S.pending.idx===i&&["place","spell","use"].includes(S.pending.type)) d.classList.add("selected");
     d.onclick=()=>onHandClick(i);
+    d.onmouseenter=()=>{ if(!S.pending) showDetail(c); };   // マウスなら重ねるだけで内容が読める
     ha.appendChild(d);
   });
   document.getElementById("hpP").textContent=S.p.hp;
@@ -2287,6 +2632,16 @@ function render(){
   const canDiscard = !busy && S.pending && S.pending.idx!==undefined && !S.p.discarded;
   document.getElementById("discardBtn").classList.toggle("on", !!canDiscard);
   if(canDiscard) document.getElementById("discardBtn").onclick=()=>discardCard(S.pending.idx);
+  // 攻撃対象を選んでいる間、盤面の状況を1行で示す
+  const ab=document.getElementById("atkBar");
+  if(attacking&&!busy){
+    const nio=nioOf(S.e);
+    ab.textContent = nio.length ? `⛨ ${S.e.board[nio[0]].n}（におうだち）しか攻撃できません`
+      : wall ? "🧱 ウォール中：相手の前衛3マスが埋まっているのでリーダーを殴れません"
+      : atg.leader ? "✔ リーダーを直接攻撃できます"
+      : "赤く光っている相手を選んでください";
+    ab.style.display="block";
+  } else ab.style.display="none";
   hint.textContent = !S.pending ? "攻撃する相手を選んでください"
     : S.pending.type==="place" ? "置くマスを選んでください"
     : S.pending.type==="use"   ? "もう一度カードを押すと使えます"
@@ -2455,7 +2810,7 @@ function showModeSelect(){
       <div class="menuCard" data-lv="2"><div class="ic">😈</div><h3>AI・強い</h3><p>リーサルを合算し的確に詰めてくる</p></div>
       <div class="menuCard" data-pvp="1"><div class="ic">👥</div><h3>2人で対戦</h3><p>1台の画面を交代で使って対戦</p></div>
     </div>
-    <p class="hint2" style="margin-top:14px">勝利で 80G ／ 敗北でも 20G もらえます（AI戦のみ）</p>`);
+    <p class="hint2" style="margin-top:14px">勝てば 弱60G／ふつう100G／強160G、負けても25G。<br>職業ごとに初めて勝つと +200G のボーナス</p>`);
   scr().querySelector("#bk").onclick=showHome;
   scr().querySelectorAll("[data-lv]").forEach(el=>el.onclick=()=>{
     MODE="ai"; AI_LEVEL=+el.dataset.lv;
