@@ -456,6 +456,30 @@
     .menuCard:hover, .clsCard:hover { transform:none; }
     .card:active { transform:translateY(-8px) scale(1.04); }
   }
+  /* 大技のカットイン */
+  #cutin { position:fixed; inset:0; z-index:70; display:none; pointer-events:none;
+    align-items:center; justify-content:center; }
+  #cutin.on { display:flex; }
+  #cutin .band { position:absolute; left:0; right:0; height:172px;
+    background:linear-gradient(90deg, rgba(0,0,0,0), rgba(6,8,14,.92) 12% 88%, rgba(0,0,0,0));
+    border-top:2px solid #d9b24a; border-bottom:2px solid #d9b24a;
+    animation:bandIn .16s ease-out; }
+  @keyframes bandIn { from{ transform:scaleY(0); } to{ transform:scaleY(1); } }
+  #cutin .inner { position:relative; display:flex; align-items:center; gap:20px;
+    animation:cutSlide .38s cubic-bezier(.16,.9,.3,1); }
+  @keyframes cutSlide { from{ transform:translateX(-60px); opacity:0; } to{ transform:translateX(0); opacity:1; } }
+  #cutin .pic { width:132px; height:132px; display:flex; align-items:center; justify-content:center;
+    filter:drop-shadow(0 6px 14px rgba(0,0,0,.8)); }
+  #cutin .pic svg,#cutin .pic img { width:132px; height:132px; }
+  #cutin .txt h3 { font-size:30px; color:#ffe9a0; -webkit-text-stroke:1px #5e3a00;
+    text-shadow:0 4px 12px #000; letter-spacing:2px; }
+  #cutin .txt p { font-size:15px; color:#fff; margin-top:4px; text-shadow:0 2px 5px #000; }
+  #cutin .rar { display:inline-block; font-size:11px; font-weight:bold; padding:1px 10px;
+    border-radius:8px; margin-bottom:4px; background:linear-gradient(#ffe27a,#e8a01a); color:#4a3000; }
+  /* 決着の閃光 */
+  #flash { position:fixed; inset:0; z-index:99; background:#fff; opacity:0; pointer-events:none; }
+  #flash.on { animation:flashA .5s forwards; }
+  @keyframes flashA { 0%{opacity:0;} 12%{opacity:.92;} 100%{opacity:0;} }
   /* チュートリアル */
   #tutoMask { position:fixed; inset:0; z-index:57; background:rgba(2,4,10,.5); display:none; pointer-events:none; }
   #tutoMask.on { display:block; }
@@ -610,6 +634,8 @@
 <div id="coach"></div>
 <div id="tutoMask"></div>
 <div id="tutoBubble"></div>
+<div id="cutin"><div class="band"></div><div class="inner"><div class="pic"></div><div class="txt"></div></div></div>
+<div id="flash"></div>
 <button id="cancelBtn">✕ やめる</button>
 <button id="discardBtn">🗑 このカードを捨てる</button>
 <button id="potionBtn">🧪 まほうのせいすい（MP+1）</button>
@@ -888,6 +914,10 @@ const POOL = [
  {n:"かげぬい",      t:"unit", c:3, a:4, h:1, kw:"stealth", cls:"thief", r:"N", gen:{b:"humanoid",g:"gDark",l:"#07080d"}},
 ];
 // ============ 種族（デッキ構築の軸） ============
+// 職業ごとのスキル演出（飛ばす絵）
+const CLASS_FX={ sword:{a:"ブロンズソード"}, mage:{a:"サンダーボルト"}, priest:{a:"ヒーリング"},
+  monk:{a:"英雄のうたげ"}, merchant:{a:"こうばいの札"}, oracle:{a:"うんめいの輪"},
+  dark:{a:"血のちかい"}, thief:{a:"きりさきの短剣"} };
 const RACE_BY_BODY={slime:"スライム",beast:"けもの",dragon:"ドラゴン",humanoid:"にんげん",
   golem:"ぶっしつ",bird:"とり",insect:"むし",undead:"アンデッド",plant:"しょくぶつ",
   elem:"エレメント",fish:"すいせい"};
@@ -1160,6 +1190,20 @@ function noise(dur,vol,delay,freq){
 const NOTE={C3:130.81,D3:146.83,E3:164.81,F3:174.61,G3:196,A3:220,Bb3:233.08,B3:246.94,
  C4:261.63,D4:293.66,Eb4:311.13,E4:329.63,F4:349.23,G4:392,A4:440,Bb4:466.16,B4:493.88,
  C5:523.25,D5:587.33,Eb5:622.25,E5:659.25,F5:698.46,G5:783.99,A5:880,Bb5:932.33,C6:1046.5};
+// 場面ごとの曲。ホームは穏やか、対戦は勇壮、勝利はファンファーレ
+const TUNES={
+ home:{bpm:88, mel:[
+   ["A4",1],["C5",1],["D5",2],["C5",1],["A4",1],["G4",2],
+   ["F4",1],["G4",1],["A4",2],["G4",1],["F4",.5],["E4",.5],["D4",2],
+   ["A4",1],["D5",1],["F5",2],["E5",1],["D5",1],["C5",2],
+   ["Bb4",1],["A4",1],["G4",2],["A4",4]],
+  bass:[["D3",4],["F3",4],["C3",4],["G3",4],["D3",4],["Bb3",4],["F3",4],["A3",4]]},
+ battle:{bpm:112, mel:null, bass:null},   // 既存のTHEME/BASSを使う
+ win:{bpm:120, mel:[
+   ["D5",.5],["F5",.5],["A5",1],["G5",.5],["A5",.5],["C6",2],
+   ["A5",1],["F5",1],["D5",2],[null,2]],
+  bass:[["D3",2],["A3",2],["Bb3",2],["D3",2]], once:true},
+};
 // 主旋律（音名, 長さ拍） 8分=0.5 / 4分=1
 const THEME=[
  ["D5",1],["A4",.5],["D5",.5],["F5",1],["E5",1],
@@ -1173,7 +1217,17 @@ const THEME=[
 ];
 // 伴奏（コード根音）
 const BASS=[["D3",4],["A3",4],["Bb3",4],["G3",4],["D3",4],["A3",4],["Bb3",4],["D3",4]];
-let BGM={on:true, timer:null, t:0, mi:0, bi:0, gain:null, started:false};
+let BGM={on:true, timer:null, t:0, mi:0, bi:0, gain:null, started:false, scene:"home"};
+function curTune(){
+  const t=TUNES[BGM.scene]||TUNES.battle;
+  return { bpm:t.bpm, mel:t.mel||THEME, bass:t.bass||BASS, once:!!t.once };
+}
+// 場面が変わったら曲を切り替える
+function bgmScene(name){
+  if(BGM.scene===name) return;
+  BGM.scene=name; BGM.mi=0; BGM.bi=0;
+  if(AC&&BGM.started){ BGM.t=AC.currentTime+0.05; }
+}
 function bgmGain(){
   if(!BGM.gain){ BGM.gain=AC.createGain(); BGM.gain.gain.value=0.13; BGM.gain.connect(MASTER||AC.destination); }
   return BGM.gain;
@@ -1191,15 +1245,16 @@ function bgmNote(freq,start,dur,type,vol,detune){
 }
 function bgmSchedule(){
   if(!AC||!BGM.on) return;
-  const BPM=104, beat=60/BPM, ahead=1.2;
+  const T=curTune(), beat=60/T.bpm, ahead=1.2;
   while(BGM.t < AC.currentTime+ahead){
     if(BGM.t < AC.currentTime) BGM.t=AC.currentTime+0.05;
-    const [n,d]=THEME[BGM.mi%THEME.length];
+    if(T.once && BGM.mi>=T.mel.length){ bgmScene("home"); return; }   // 勝利ファンファーレは1回だけ
+    const [n,d]=T.mel[BGM.mi%T.mel.length];
     const dur=d*beat;
     bgmNote(NOTE[n],BGM.t,dur*0.95,"triangle",0.20);          // 主旋律
     bgmNote(NOTE[n]?NOTE[n]/2:0,BGM.t,dur*0.9,"sine",0.07);    // 1オクターブ下で厚み
     // 伴奏: 1拍ごとに根音と5度を刻む
-    const [bn]=BASS[BGM.bi%BASS.length];
+    const [bn]=T.bass[BGM.bi%T.bass.length];
     for(let k=0;k<d;k++){
       bgmNote(NOTE[bn],BGM.t+k*beat,beat*0.42,"sawtooth",0.055);
       bgmNote(NOTE[bn]*1.5,BGM.t+k*beat+beat*0.5,beat*0.3,"sawtooth",0.032);
@@ -1358,7 +1413,7 @@ function animSpell(face,tSlot,done){
   setTimeout(()=>{ spawnImpact(tr.x+tr.width/2,tr.y+tr.height/2); p.remove(); if(done)done(); },300);
 }
 // 山札→手札のドロー演出（カードの裏面が飛んでくる）
-function animDraw(n){
+function animDraw(n, cards){
   if(SIM||!n) return;
   const deck=document.getElementById("deckInfo"), hand=document.getElementById("handArea");
   if(!deck||!hand) return;
@@ -1369,6 +1424,10 @@ function animDraw(n){
     c.className="drawcard";
     c.style.cssText=`left:${dr.x+dr.width/2-30*K}px;top:${dr.y+8*K}px;`+
       `width:60px;height:78px;transform-origin:top left;transform:scale(${K}) rotate(0deg)`;
+    // 引いたカードが分かるように絵を載せる
+    const cd=cards&&cards[i];
+    if(cd) c.innerHTML=`<div style="display:flex;align-items:center;justify-content:center;height:100%">
+      <div style="width:46px;height:46px">${art(cd.n,46)||""}</div></div>`;
     document.body.appendChild(c);
     const dx=hr.x+hr.width/2-(dr.x+dr.width/2), dy=hr.y+18*K-(dr.y+8*K);
     setTimeout(()=>{
@@ -1531,6 +1590,7 @@ function startGame(clsP, clsE, opt){
     document.getElementById("vsE").textContent="訓練相手";
   }
   labelSides();
+  bgmScene("battle");
   document.getElementById("log").innerHTML="";
   showDetail(null); restorePedestals(); render();
   if(MODE==="pvp"){
@@ -1656,6 +1716,12 @@ function summon(side, card, slot){
   if(card.kw==="peak"&&pl.hp>=25){ u.a+=2; u.h+=2; u.maxH+=2; }
   pl.board[slot]=u;
   sfx("summon");
+  // レジェンドと強い召喚時効果は大きく見せる
+  const CRY_TXT={cryaoe2:"敵全体に2ダメージ！", cryaoe4:"敵全体に4ダメージ！",
+    cryseal:"敵全体を凍てつかせる！", crydestroy:"敵を1体ほうむる！", crysilence:"敵の力を封じる！",
+    racebuff:"同族が力を得る！", cry2:"敵に2ダメージ！"};
+  if(card.r==="L") cutin(card.n, CRY_TXT[card.kw]||"伝説が舞い降りた", "L");
+  else if(CRY_TXT[card.kw]&&card.c>=5) cutin(card.n, CRY_TXT[card.kw]);
   if(card.kw==="boost"&&u.boostVal>0) log(`${card.n}のスキルブースト！ +${u.boostVal}/+${u.boostVal}`);
   if(card.kw==="peak"&&pl.hp>=25) log(`${card.n}の絶好調！ +2/+2`);
   // おうえん: 他の味方全体を+1/+1
@@ -1837,10 +1903,16 @@ function checkWin(){
       rew=`ゴールド +${g}${extra.length?"　"+extra.join("　"):""}　／　所持 ${SAVE.gold}G　（${SAVE.wins}勝 ${SAVE.losses}敗）`;
       sfx(pWin?"win":"lose");
     }
+    // 決着演出: 負けたリーダーが崩れ→白フラッシュ→結果
+    const loserPed=document.getElementById(pWin?"pedE":"pedP");
+    const ch=loserPed&&loserPed.querySelector(".leaderChar");
+    if(ch){ ch.style.animation="deathA .55s ease-in forwards"; }
+    flashScreen();
+    bgmScene(pWin?"win":"home");
     document.getElementById("resultTxt").textContent=txt;
     document.getElementById("resultRew").textContent=rew;
-    document.getElementById("resultOv").style.display="flex";
     busy=true;
+    setTimeout(()=>{ document.getElementById("resultOv").style.display="flex"; }, 620);
     return true;
   }
   return false;
@@ -1953,6 +2025,7 @@ function castSpell(side, card, tSlot){
       u.h-=2; fxPop(side==="p"?"e":"p",tSlot,2);
       if(u.h<=0) killUnit(foe,tSlot); }
   } else if(card.spell==="wipe"){
+    cutin(card.n,"すべてを飲み込む","L"); flashScreen();
     log(`${card.n}！ すべてのユニットが消し飛んだ`);
     [S.p,S.e].forEach(pl=>pl.board.forEach((u,i)=>{ if(u) killUnit(pl,i); }));
   } else if(card.spell==="scry"){
@@ -1993,6 +2066,9 @@ function castSpell(side, card, tSlot){
 function fireTension(side, tSlot){
   const pl=S[side]; pl.tension=0;
   sfx("tension");
+  // 職業スキルは名前を大きく出す
+  const sk=CLASSES[pl.cls].skill.replace(/（.*/,"");
+  cutin("LEADER_"+pl.cls, `テンションスキル　${sk}`);
   if(pl.cls==="sword"){
     pl.weapon={n:"精霊の剣",a:3,dur:3}; pl.leaderReady=!pl.leaderAttacked;
     log("テンションスキル【精霊の剣】！ 3/3の武器を装備");
@@ -2134,7 +2210,8 @@ function onEnemyTarget(tSlot){
     } else if(S.pending.type==="tension"){
       if(tSlot!=="leader"&&S.e.board[tSlot]&&S.e.board[tSlot].stealth) return;
       S.pending=null; busy=true;
-      animSpell(art("オーブ",32)||"🔮",tSlot,()=>{ busy=false; fireTension("p",tSlot); render(); });
+      const fx=CLASS_FX[S.p.cls]||{a:"オーブ"};
+      animSpell(art(fx.a,32)||"🔮",tSlot,()=>{ busy=false; fireTension("p",tSlot); render(); });
     }
     return;
   }
@@ -2230,7 +2307,7 @@ function startTurn(side){
   pl.leaderReady=!!pl.weapon;
   const before=pl.hand.length;
   draw(pl,1);
-  if(pl===S.p) animDraw(pl.hand.length-before);
+  if(pl===S.p) animDraw(pl.hand.length-before, pl.hand.slice(before));
 }
 
 // ============ AI ============
@@ -2506,6 +2583,31 @@ function showDetail(c){
     <div class="dtxt">${body}</div>`;
   d.classList.add("on");
 }
+// ============ カットイン演出 ============
+let cutQueue=[], cutBusy=false;
+function cutin(name, sub, rar){
+  if(SIM) return;
+  cutQueue.push({name, sub, rar});
+  if(!cutBusy) cutNext();
+}
+function cutNext(){
+  const c=cutQueue.shift();
+  if(!c){ cutBusy=false; return; }
+  cutBusy=true;
+  const el=document.getElementById("cutin");
+  el.querySelector(".pic").innerHTML=art(c.name,132)||"";
+  el.querySelector(".txt").innerHTML=
+    (c.rar==="L"?'<span class="rar">LEGEND</span><br>':"")+
+    `<h3>${c.name}</h3>`+(c.sub?`<p>${c.sub}</p>`:"");
+  el.classList.remove("on"); void el.offsetWidth; el.classList.add("on");
+  sfx(c.rar==="L"?"tensionmax":"summon");
+  setTimeout(()=>{ el.classList.remove("on"); setTimeout(cutNext, 90); }, c.rar==="L"?1150:820);
+}
+function flashScreen(){
+  if(SIM) return;
+  const f=document.getElementById("flash");
+  f.classList.remove("on"); void f.offsetWidth; f.classList.add("on");
+}
 // ============ 初心者向けガイド ============
 let coachTimer=null;
 function coach(msg){
@@ -2754,6 +2856,7 @@ function showHome(){
   document.getElementById("mullOv").style.display="none";
   document.getElementById("handoff").style.display="none";
   busy=true; S=null;
+  bgmScene("home");
   const total=POOL.length, have=POOL.filter(c=>owned(c.n)>0).length;
   const d=dailyState();
   openScreen(`<div class="scHead"><h2>アリーナ・カードタクティクス</h2>${purse()}</div>
@@ -3222,6 +3325,7 @@ fitStage();
 if(!SAVE.tuto) showFirstBoot(); else showHome();
 // スクリーンショット用: ?shot=gacha / deck
 if(location.search.includes("shot=gacha")){ showGacha(openPack(10)); }
+if(location.search.includes("shot=cutin")){ SAVE.tuto=1; MODE="ai"; startGame("sword","mage"); document.getElementById("mullBtn").click(); summon("p",POOL.find(c=>c.n==="竜王ヴァルガ"),0); render(); }
 if(location.search.includes("shot=deck")){ showDeckEdit("sword"); }
 
 // 開発用スナップショット: ?demo=sword 等で盤面を再現した状態から開始
