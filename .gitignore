@@ -1,2 +1,7 @@
 ﻿_*.png
 artifact.html
+promo/node_modules/
+promo/frames/
+promo/bgm.wav
+promo/promo.mp4
+promo/package-lock.json
