@@ -133,9 +133,13 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     // 出せるカードを順に出す
     for (let k = 0; k < 5; k++) {
       const ok = await page.evaluate(() => {
-        const c = document.querySelector("#handArea .card.playable");
-        if (!c) return null;
-        c.setAttribute("data-promo", "1"); return true;
+        // 盤面が育つよう、出せるなかで一番コストの高いユニットを選ぶ
+        const cards = [...document.querySelectorAll("#handArea .card")];
+        const cand = S.p.hand.map((c, i) => ({ c, i }))
+          .filter(x => x.c.c <= S.p.mp && cards[x.i] && cards[x.i].classList.contains("playable"))
+          .sort((a, b) => (b.c.t === "unit") - (a.c.t === "unit") || b.c.c - a.c.c)[0];
+        if (!cand) return null;
+        cards[cand.i].setAttribute("data-promo", "1"); return true;
       });
       if (!ok) break;
       await tap("[data-promo]", { pre: 200, post: 140 });
@@ -166,8 +170,9 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       await tap("[data-promo]", { pre: 190, post: 160 });
       await page.evaluate(() => document.querySelectorAll("[data-promo]").forEach(e => e.removeAttribute("data-promo")));
       const tgt = await page.evaluate(() => {
-        const t = document.querySelector("#gridE .unit.targetable") ||
-                  document.querySelector("#pedE.targetable") || document.querySelector("#pedE");
+        // 相打ちで盤面が消えないよう、殴れるならリーダーを狙う
+        const t = document.querySelector("#pedE.targetable") ||
+                  document.querySelector("#gridE .unit.targetable") || document.querySelector("#pedE");
         if (!t) return null;
         t.setAttribute("data-promo", "1"); return true;
       });
